@@ -78,39 +78,44 @@ Fähigkeiten werden **nicht garantiert** übertragen. Ob ein Skill erworben wird
 - Entitäts-Level vs. Fähigkeits-Level
 - Skill-spezifischer Dropp-Wahrscheinlichkeit (seltene Skills sind schwerer zu erhalten)
 
-### 3.1 Basis-Skills (Tiere / Wesen)
+### 3.1 Insekten-Skills
 
-> **Status: Implementiert (v0.2)** — Werte in `src/data/skills.ts`. Überarbeitung für v0.3 ausstehend.
+> **Status: Implementiert (v0.3)** — Basisset. Alle weiteren Skills werden separat entworfen und einzeln hinzugefügt.
 
-| Skill-ID | Name | Element | Icon | Quelle (Beispiele) | Max Level | baseXpThreshold |
-|----------|------|---------|------|--------------------|-----------|-----------------|
-| fire | Fireball | fire | 🔥 | Red Slime, Goblin | 10 | 10 |
-| water | Water Jet | water | 💧 | Blue Slime | 10 | 10 |
-| earth | Stone Skin | earth | 🪨 | Stone Golem, Vine Plant | 10 | 10 |
-| wind | Wind Slash | wind | 💨 | Forest Wolf | 10 | 10 |
-| slime | Slime Coat | slime | 🫧 | Jeder Slime-Typ | 10 | 8 |
-| poison | Toxic Spit | poison | ☠️ | Poison Mushroom, Vine Plant | 10 | 12 |
-| dark | Shadow Step | dark | 🌑 | Dark Wisp (selten) | 10 | 20 |
-| light | Holy Beam | light | ✨ | Light Fairy (selten) | 10 | 20 |
+#### Entitäten
+
+| Entität | Level | Disposition | Kategorie | Quellen-Skills |
+|---------|-------|-------------|-----------|----------------|
+| Ameise | 1 | neutral | creature | Chitin Armor (15%), Superstrength (10%) |
+| Marienkäfer | 1 | neutral | creature | Hemolymph (15%) |
+| Springspinne | 2 | hostile | creature | Jump (20%), Chitin Armor (10%) |
+| Giftspinne | 2 | hostile | creature | Venom (20%), Chitin Armor (8%) |
+
+#### Skills
+
+| Skill-ID | Name | Typ | Element | Icon | Quellen | Beschreibung |
+|----------|------|-----|---------|------|---------|--------------|
+| chitin_armor | Chitin Armor | passiv | earth | 🛡️ | Ameise, Springspinne, Giftspinne | Reduziert physischen Schaden |
+| superstrength | Superstrength | passiv | none | 💪 | Ameise | Erhöht Material-Ausbeute bei Absorb |
+| venom | Venom | passiv | poison | 🕷️ | Giftspinne | Treffer vergiften Ziel (DoT-Chance) |
+| jump | Jump | aktiv | none | 🦘 | Springspinne | **Bewegungs-Unlock**: Ohne diesen Skill kann der Slime nicht springen. Höheres Level = größere Sprunghöhe/-weite. |
+| hemolymph | Hemolymph | passiv | poison | 🐞 | Marienkäfer | Bei eigenem Treffer: Angreifer vergiftet |
+
+Alle Basis-Skills haben `maxLevel: 0` (unlimitiert). XP-Skalierung via Option D (`balance.ts`).
 
 ### 3.2 Pflanzen-Skills
 
-> **Status: Konzept** — Noch nicht implementiert.
+> **Status: Implementiert (v0.3)**
 
-Jede Pflanze besitzt mindestens einen der folgenden Skills. Die Wahrscheinlichkeit, diesen bei Absorb/Analyze zu erhalten, ist **skill-abhängig**.
+| Skill-ID | Name | Typ | Dropp-Chance | Quelle | Beschreibung |
+|----------|------|-----|--------------|--------|--------------|
+| photosynthesis | Photosynthesis | passiv | 12% | Gras | Regeneriert HP passiv außerhalb des Kampfes |
 
-| Skill-ID | Name | Dropp-Wahrscheinlichkeit | Beschreibung |
-|----------|------|--------------------------|--------------|
-| grow | Grow | **Hoch** — jede Pflanze kann diesen Skill besitzen | Verbraucht Materialien, um den Slime wachsen zu lassen (Größe & Stats) |
-| photosynthesis | Photosynthesis | **Gering** — seltener Skill, wenige Pflanzen tragen ihn | Noch zu definieren — regeneriert oder produziert Ressourcen über Zeit |
+#### Entitäten (Pflanzen)
 
-**Grow im Detail:**
-- Aktive Fähigkeit: Spieler setzt Grow bewusst ein.
-- Verbraucht definierte Materialien (z.B. Pflanzenfasern — genaue Kosten noch offen).
-- Erhöht dauerhaft Größe und/oder Stats des Slimes (HP, Angriff, Verteidigung — genaue Werte noch offen).
-- Skaliert mit Skill-Level: höheres Grow-Level = effizienterer Verbrauch oder stärkeres Wachstum.
-
-**Offene Entscheidung:** Was genau tut Photosynthesis? (Ressourcenregeneration, Materialproduktion über Zeit, Heilung?)
+| Entität | Level | Respawn | Drops |
+|---------|-------|---------|-------|
+| Gras | 1 | 60 Sek | Pflanzenfasern (100%), Photosynthesis (12%) |
 
 ---
 
@@ -132,25 +137,19 @@ Jede Pflanze besitzt mindestens einen der folgenden Skills. Die Wahrscheinlichke
 
 ## 5. Kombinations-System
 
-> **Status: Implementiert (v0.2)** — Rezepte in `src/data/skills.ts` via `RECIPE_INDEX`.
+> **Status: Mechanismus implementiert — keine Rezepte definiert (v0.3)**
 
-Zwei bekannte Basis-Skills können kombiniert werden, um Kombinations-Skills freizuschalten.
+Der Kombinations-Mechanismus (`SkillSystem.ts`, `RECIPE_INDEX`, COMBO-Tab im UI) ist vollständig vorhanden.
+Aktuell gibt es keine kombinierbaren Skills. Rezepte werden einzeln und gezielt entworfen.
 
-| Skill-ID | Name | Rezept | Element | Icon | Max Level |
-|----------|------|--------|---------|------|-----------|
-| steam | Steam Burst | fire + water | water | ♨️ | 5 |
-| firestorm | Firestorm | fire + wind | fire | 🌪️ | 5 |
-| toxiccoat | Toxic Coat | poison + slime | poison | 🟣 | 5 |
-| mudwall | Mud Wall | earth + water | earth | 🟫 | 5 |
-| shadowform | Shadow Form | dark + slime | dark | 👤 | 5 |
-| iceshard | Ice Shard | wind + water | wind | 🧊 | 5 |
-
-### Regeln
+### Regeln (gültig sobald Rezepte existieren)
 1. Beide Slots müssen mit verschiedenen Basis-Skills belegt sein.
 2. Kombinations-Skills können **nicht** als Input für weitere Kombinationen genutzt werden.
 3. Wenn das Ergebnis bereits bekannt ist, wird stattdessen Skill-XP vergeben.
 
 **Offene Entscheidung:** Sollen Rezepte versteckt sein und erst durch Experiment gefunden werden?
+
+[VERWORFEN: Steam Burst, Firestorm, Toxic Coat, Mud Wall, Shadow Form, Ice Shard — entfernt in v0.3, werden neu entworfen]
 
 ---
 
@@ -177,4 +176,4 @@ Zwei bekannte Basis-Skills können kombiniert werden, um Kombinations-Skills fre
 
 ---
 
-*Letzte Aktualisierung: v0.3 — Infinite Storage als Core-Skill dokumentiert, K/M/B/T/Q-Mengendarstellung (März 2026)*
+*Letzte Aktualisierung: v0.3 — Basisset auf Gras + Insekten reduziert; neue Skills: Chitin Armor, Superstrength, Venom, Pounce, Hemolymph; alte Skills entfernt (März 2026)*
