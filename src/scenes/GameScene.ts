@@ -108,6 +108,24 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
+    // Gras-Patches (visuelle Untermalung für Gras-Cluster)
+    const grassPatches = [
+      { x: 240, y: 200, w: 160, h: 120 }, // Cluster A — nahe Spielerstart
+      { x: 680, y: 130, w: 180, h: 130 }, // Cluster B — oben Mitte
+      { x: 120, y: 590, w: 170, h: 130 }, // Cluster C — links
+      { x: 980, y: 340, w: 180, h: 140 }, // Cluster D — rechts
+      { x: 780, y: 800, w: 190, h: 130 }, // Cluster E — unten Mitte
+      { x: 1230, y: 640, w: 160, h: 120 }, // Cluster F — rechts unten
+    ];
+    g.fillStyle(0x1e4a28, 0.85);
+    for (const p of grassPatches) {
+      g.fillRoundedRect(p.x, p.y, p.w, p.h, 18);
+    }
+    g.fillStyle(0x256030, 0.4);
+    for (const p of grassPatches) {
+      g.fillRoundedRect(p.x + 8, p.y + 8, p.w - 16, p.h - 16, 12);
+    }
+
     // Dekorationen
     const decos = [
       { x: 80,   y: 80,   i: "🌲" }, { x: 1450, y: 90,   i: "🌲" },
@@ -159,22 +177,48 @@ export class GameScene extends Phaser.Scene {
   // ----------------------------------------------------------
   private createEntities() {
     const placements = [
-      { defId: "red_slime",      x: 200,  y: 200 },
-      { defId: "red_slime",      x: 600,  y: 350 },
-      { defId: "blue_slime",     x: 400,  y: 150 },
-      { defId: "blue_slime",     x: 800,  y: 400 },
-      { defId: "goblin",         x: 500,  y: 500 },
-      { defId: "goblin",         x: 300,  y: 600 },
-      { defId: "forest_wolf",    x: 900,  y: 250 },
-      { defId: "stone_golem",    x: 700,  y: 700 },
-      { defId: "vine_plant",     x: 150,  y: 450 },
-      { defId: "vine_plant",     x: 1000, y: 500 },
-      { defId: "poison_mushroom",x: 350,  y: 300 },
-      { defId: "poison_mushroom",x: 650,  y: 550 },
-      { defId: "forest_stone",   x: 250,  y: 800 },
-      { defId: "forest_stone",   x: 900,  y: 800 },
-      { defId: "dark_wisp",      x: 1100, y: 900 },
-      { defId: "light_fairy",    x: 1200, y: 200 },
+      // --- Cluster A (nahe Spielerstart, ~300,250) ---
+      { defId: "grass",          x: 270,  y: 220 },
+      { defId: "grass",          x: 320,  y: 250 },
+      { defId: "grass",          x: 295,  y: 295 },
+      { defId: "ant",            x: 350,  y: 225 },
+      { defId: "ladybug",        x: 260,  y: 300 },
+
+      // --- Cluster B (oben Mitte, ~760,185) ---
+      { defId: "grass",          x: 720,  y: 165 },
+      { defId: "grass",          x: 770,  y: 190 },
+      { defId: "grass",          x: 745,  y: 235 },
+      { defId: "ant",            x: 810,  y: 170 },
+      { defId: "jumping_spider", x: 690,  y: 210 },
+
+      // --- Cluster C (links, ~195,650) ---
+      { defId: "grass",          x: 160,  y: 620 },
+      { defId: "grass",          x: 210,  y: 645 },
+      { defId: "grass",          x: 185,  y: 690 },
+      { defId: "ladybug",        x: 145,  y: 665 },
+      { defId: "ant",            x: 245,  y: 635 },
+
+      // --- Cluster D (rechts, ~1060,400) ---
+      { defId: "grass",          x: 1010, y: 370 },
+      { defId: "grass",          x: 1065, y: 390 },
+      { defId: "grass",          x: 1035, y: 440 },
+      { defId: "jumping_spider", x: 1110, y: 375 },
+      { defId: "ladybug",        x: 1000, y: 430 },
+      { defId: "ant",            x: 1075, y: 450 },
+
+      // --- Cluster E (unten Mitte, ~860,850) ---
+      { defId: "grass",          x: 825,  y: 825 },
+      { defId: "grass",          x: 880,  y: 850 },
+      { defId: "grass",          x: 850,  y: 895 },
+      { defId: "ant",            x: 920,  y: 830 },
+      { defId: "jumping_spider", x: 810,  y: 880 },
+
+      // --- Cluster F (rechts unten, ~1295,680) ---
+      { defId: "grass",          x: 1255, y: 660 },
+      { defId: "grass",          x: 1310, y: 680 },
+      { defId: "grass",          x: 1280, y: 725 },
+      { defId: "ladybug",        x: 1350, y: 665 },
+      { defId: "jumping_spider", x: 1240, y: 710 },
     ];
 
     for (let i = 0; i < placements.length; i++) {
@@ -395,7 +439,7 @@ export class GameScene extends Phaser.Scene {
     if (nearestId !== this.lastNearbyId) {
       this.lastNearbyId = nearestId;
       updateNearbyPanel(
-        nearest ? ENTITY_MAP.get(nearest.definitionId) : null,
+        nearest ? ENTITY_MAP.get(nearest.definitionId) : undefined,
         this.gameState
       );
     }
@@ -436,7 +480,7 @@ export class GameScene extends Phaser.Scene {
     updateUI(this.gameState);
     if (result.success) {
       this.lastNearbyId = null;
-      updateNearbyPanel(null, this.gameState);
+      updateNearbyPanel(undefined, this.gameState);
     }
   }
 
