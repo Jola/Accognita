@@ -24,6 +24,21 @@ import type { SkillDefinition } from "../types/Skill";
 // -----------------------------------------------------------
 export const CORE_SKILLS: SkillDefinition[] = [
   {
+    id: "infinite_storage",
+    name: "Infinite Storage",
+    element: "none",
+    icon: "♾️",
+    category: "core",
+    activation: "passive",
+    maxLevel: 1,             // Immer auf Level 1 — keine Steigerung
+    baseXpThreshold: 999999, // Nie steigerbar
+    xpThresholdMultiplier: 1.0,
+    description:
+      "Der Slime-Körper ist ein dimensionales Lager ohne Kapazitätsgrenze. " +
+      "Alle gesammelten Materialien werden unbegrenzt gespeichert. " +
+      "Mengen bis Number.MAX_SAFE_INTEGER (~9 Quadrillionen) werden unterstützt.",
+  },
+  {
     id: "analyze",
     name: "Analyze",
     element: "none",

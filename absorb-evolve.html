@@ -518,6 +518,20 @@
   // src/data/skills.ts
   var CORE_SKILLS = [
     {
+      id: "infinite_storage",
+      name: "Infinite Storage",
+      element: "none",
+      icon: "\u267E\uFE0F",
+      category: "core",
+      activation: "passive",
+      maxLevel: 1,
+      // Immer auf Level 1 — keine Steigerung
+      baseXpThreshold: 999999,
+      // Nie steigerbar
+      xpThresholdMultiplier: 1,
+      description: "Der Slime-K\xF6rper ist ein dimensionales Lager ohne Kapazit\xE4tsgrenze. Alle gesammelten Materialien werden unbegrenzt gespeichert. Mengen bis Number.MAX_SAFE_INTEGER (~9 Quadrillionen) werden unterst\xFCtzt."
+    },
+    {
       id: "analyze",
       name: "Analyze",
       element: "none",
@@ -1264,6 +1278,28 @@
   }
 
   // src/systems/MaterialSystem.ts
+  var SUFFIXES = [
+    [1e15, "Q"],
+    // Quadrillion
+    [1e12, "T"],
+    // Trillion
+    [1e9, "B"],
+    // Billion
+    [1e6, "M"],
+    // Million
+    [1e3, "K"]
+    // Tausend
+  ];
+  function formatAmount(n) {
+    for (const [threshold, suffix] of SUFFIXES) {
+      if (n >= threshold) {
+        const value = n / threshold;
+        const formatted = value % 1 === 0 ? value.toFixed(0) : value.toFixed(1);
+        return `${formatted}${suffix}`;
+      }
+    }
+    return String(Math.floor(n));
+  }
   function getMaterialAmount(player, materialId) {
     return player.materials.get(materialId) ?? 0;
   }
@@ -1284,7 +1320,7 @@
       if (amount <= 0) continue;
       const def = MATERIAL_MAP.get(id);
       if (!def) continue;
-      result.push({ id, name: def.name, icon: def.icon, amount });
+      result.push({ id, name: def.name, icon: def.icon, amount, formatted: formatAmount(amount) });
     }
     return result.sort((a, b) => a.name.localeCompare(b.name));
   }
@@ -1941,7 +1977,7 @@
       <div class="material-row">
         <span class="mat-icon">${m.icon}</span>
         <span class="mat-name">${m.name}</span>
-        <span class="mat-amount">\xD7${m.amount}</span>
+        <span class="mat-amount">\xD7${m.formatted}</span>
       </div>
     `
     ).join("");
