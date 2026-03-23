@@ -557,145 +557,71 @@
     }
   ];
   var BASE_SKILLS = [
+    // --- INSEKTEN-SKILLS ---
     {
-      id: "fire",
-      name: "Fireball",
-      element: "fire",
-      icon: "\u{1F525}",
-      category: "basic",
-      activation: "active",
-      maxLevel: 0,
-      baseXpThreshold: 10,
-      xpThresholdMultiplier: 1.5,
-      description: "Schleudert einen Feuerball auf den Feind.",
-      baseDamage: 15,
-      mpCost: 8,
-      cooldownMs: 1500
-    },
-    {
-      id: "water",
-      name: "Water Jet",
-      element: "water",
-      icon: "\u{1F4A7}",
-      category: "basic",
-      activation: "active",
-      maxLevel: 0,
-      baseXpThreshold: 10,
-      xpThresholdMultiplier: 1.5,
-      description: "Ein kraftvoller Wasserstrahl, der Feinde verlangsamt.",
-      baseDamage: 10,
-      mpCost: 6,
-      cooldownMs: 1200
-    },
-    {
-      id: "earth",
-      name: "Stone Skin",
+      id: "chitin_armor",
+      name: "Chitin Armor",
       element: "earth",
-      icon: "\u{1FAA8}",
+      icon: "\u{1F6E1}\uFE0F",
       category: "basic",
-      activation: "active",
+      activation: "passive",
       maxLevel: 0,
-      baseXpThreshold: 10,
+      baseXpThreshold: 12,
       xpThresholdMultiplier: 1.5,
-      description: "Verh\xE4rtet die Oberfl\xE4che des Slimes und erh\xF6ht die Verteidigung.",
-      baseDamage: 0,
-      mpCost: 5,
-      cooldownMs: 3e3
+      description: "Passiv: Zieht eine harte Chitinschicht \xFCber die Au\xDFenhaut. Reduziert eingehenden physischen Schaden. H\xF6heres Level = st\xE4rkere Schutzwirkung. Quelle: Ameisen (Lv1) und Spinnen (Lv2)."
     },
     {
-      id: "wind",
-      name: "Wind Slash",
-      element: "wind",
-      icon: "\u{1F4A8}",
+      id: "superstrength",
+      name: "Superstrength",
+      element: "none",
+      icon: "\u{1F4AA}",
       category: "basic",
-      activation: "active",
+      activation: "passive",
       maxLevel: 0,
-      baseXpThreshold: 10,
+      baseXpThreshold: 15,
       xpThresholdMultiplier: 1.5,
-      description: "Ein schneller Windschnitt, der den Slime kurzzeitig beschleunigt.",
-      baseDamage: 12,
-      mpCost: 7,
-      cooldownMs: 1e3
+      description: "Passiv: Ameisen tragen das 50-fache ihres K\xF6rpergewichts \u2014 der Slime \xFCbernimmt diese St\xE4rke. Materialien werden in gr\xF6\xDFerer Menge absorbiert. H\xF6heres Level = h\xF6herer Mengenbonus."
     },
     {
-      id: "slime",
-      name: "Slime Coat",
-      element: "slime",
-      icon: "\u{1FAE7}",
-      category: "basic",
-      activation: "active",
-      maxLevel: 0,
-      baseXpThreshold: 8,
-      // Leichter zu leveln — häufigste Quelle
-      xpThresholdMultiplier: 1.5,
-      description: "Bedeckt den Slime mit einer klebrigen Schicht, die Angreifer verlangsamt.",
-      baseDamage: 5,
-      mpCost: 4,
-      cooldownMs: 2e3
-    },
-    {
-      id: "poison",
-      name: "Toxic Spit",
+      id: "venom",
+      name: "Venom",
       element: "poison",
-      icon: "\u2620\uFE0F",
+      icon: "\u{1F577}\uFE0F",
+      category: "basic",
+      activation: "passive",
+      maxLevel: 0,
+      baseXpThreshold: 15,
+      xpThresholdMultiplier: 1.5,
+      description: "Passiv: Jeder Treffer des Slimes hat eine Chance, dem Ziel Gift zu injizieren. Gift verursacht Schaden \xFCber Zeit. H\xF6heres Level = h\xF6here Vergiftungschance und st\xE4rkeres Gift."
+    },
+    {
+      id: "jump",
+      name: "Pounce",
+      element: "none",
+      icon: "\u{1F998}",
       category: "basic",
       activation: "active",
       maxLevel: 0,
       baseXpThreshold: 12,
-      // Etwas schwerer — weniger Quellen
       xpThresholdMultiplier: 1.5,
-      description: "Spuckt Gift, das \xFCber Zeit Schaden verursacht.",
-      baseDamage: 4,
-      mpCost: 9,
-      cooldownMs: 2500
+      description: "Springt blitzschnell auf ein Ziel oder einen Punkt zu. Kurze Distanz, hohe Geschwindigkeit. H\xF6heres Level = gr\xF6\xDFere Sprungweite und k\xFCrzere Abklingzeit.",
+      mpCost: 6,
+      cooldownMs: 2e3
     },
     {
-      id: "dark",
-      name: "Shadow Step",
-      element: "dark",
-      icon: "\u{1F311}",
+      id: "hemolymph",
+      name: "Hemolymph",
+      element: "poison",
+      icon: "\u{1F41E}",
       category: "basic",
-      activation: "active",
+      activation: "passive",
       maxLevel: 0,
-      baseXpThreshold: 20,
-      // Schwer — selten (Dark Wisp)
+      baseXpThreshold: 12,
       xpThresholdMultiplier: 1.5,
-      description: "Tritt in den Schatten \u2014 Gegner verlieren kurz die Aggro.",
-      baseDamage: 20,
-      mpCost: 12,
-      cooldownMs: 4e3
-    },
-    {
-      id: "light",
-      name: "Holy Beam",
-      element: "light",
-      icon: "\u2728",
-      category: "basic",
-      activation: "active",
-      maxLevel: 0,
-      baseXpThreshold: 20,
-      // Schwer — selten (Light Fairy, kämpft nie)
-      xpThresholdMultiplier: 1.5,
-      description: "Ein heiliger Lichtstrahl. Light Fairy k\xE4mpft nie \u2014 nur durch Analyze.",
-      baseDamage: 18,
-      mpCost: 11,
-      cooldownMs: 3500
+      description: "Passiv: Wird der Slime getroffen, gibt er bitteres H\xE4molymph ab \u2014 der Angreifer erleidet sofort Giftschaden. H\xF6heres Level = st\xE4rkerer R\xFCckschlag."
     }
   ];
   var PLANT_SKILLS = [
-    {
-      id: "grow",
-      name: "Grow",
-      element: "nature",
-      icon: "\u{1F331}",
-      category: "basic",
-      activation: "active",
-      maxLevel: 0,
-      baseXpThreshold: 10,
-      xpThresholdMultiplier: 1.5,
-      description: "Verbraucht Pflanzenfasern um zu wachsen. Erh\xF6ht MaxHP und K\xF6rpergr\xF6\xDFe dauerhaft. H\xF6heres Level = st\xE4rkeres Wachstum pro Einsatz.",
-      materialCost: [{ materialId: "plant_fiber", amount: 5 }]
-    },
     {
       id: "photosynthesis",
       name: "Photosynthesis",
@@ -781,169 +707,13 @@
   // src/data/entities.ts
   var ENTITY_DEFINITIONS = [
     // ==========================================================
-    // KREATUREN
-    // ==========================================================
-    // --- SLIMES ---
-    {
-      id: "red_slime",
-      name: "Red Slime",
-      icon: "\u{1F534}",
-      behavior: "defensive",
-      disposition: "neutral",
-      // Greift nur an wenn Absorb fehlschlägt
-      category: "creature",
-      rarity: "common",
-      level: 2,
-      skillDrops: [
-        { skillId: "fire", chance: 0.8 },
-        { skillId: "slime", chance: 0.9 }
-      ],
-      materialDrops: [],
-      hp: 20,
-      damage: 5,
-      speed: 60,
-      respawnTime: 30,
-      interactRadius: 40,
-      aggroRadius: 80
-    },
-    {
-      id: "blue_slime",
-      name: "Blue Slime",
-      icon: "\u{1F535}",
-      behavior: "defensive",
-      disposition: "neutral",
-      category: "creature",
-      rarity: "common",
-      level: 2,
-      skillDrops: [
-        { skillId: "water", chance: 0.8 },
-        { skillId: "slime", chance: 0.9 }
-      ],
-      materialDrops: [],
-      hp: 20,
-      damage: 5,
-      speed: 55,
-      respawnTime: 30,
-      interactRadius: 40,
-      aggroRadius: 80
-    },
-    // --- WALDWESEN ---
-    {
-      id: "goblin",
-      name: "Goblin",
-      icon: "\u{1F47A}",
-      behavior: "aggressive",
-      disposition: "hostile",
-      // Greift immer an bei Fehlschlag
-      category: "creature",
-      rarity: "common",
-      level: 3,
-      skillDrops: [
-        { skillId: "fire", chance: 0.6 }
-      ],
-      materialDrops: [],
-      hp: 30,
-      damage: 8,
-      speed: 80,
-      respawnTime: 45,
-      interactRadius: 40,
-      aggroRadius: 120
-    },
-    {
-      id: "forest_wolf",
-      name: "Forest Wolf",
-      icon: "\u{1F43A}",
-      behavior: "aggressive",
-      disposition: "hostile",
-      category: "creature",
-      rarity: "uncommon",
-      level: 4,
-      skillDrops: [
-        { skillId: "wind", chance: 0.7 }
-      ],
-      materialDrops: [],
-      hp: 50,
-      damage: 15,
-      speed: 120,
-      respawnTime: 60,
-      interactRadius: 40,
-      aggroRadius: 150
-    },
-    {
-      id: "stone_golem",
-      name: "Stone Golem",
-      icon: "\u{1F5FF}",
-      behavior: "territorial",
-      disposition: "hostile",
-      category: "creature",
-      rarity: "uncommon",
-      level: 6,
-      skillDrops: [
-        { skillId: "earth", chance: 0.75 }
-      ],
-      materialDrops: [
-        // Golem hinterlässt Steine
-        { materialId: "stone", amountMin: 1, amountMax: 3, chance: 0.8 },
-        { materialId: "ore", amountMin: 1, amountMax: 1, chance: 0.2 }
-      ],
-      hp: 120,
-      damage: 25,
-      speed: 40,
-      respawnTime: 120,
-      interactRadius: 60,
-      aggroRadius: 100
-    },
-    // --- SELTENE WESEN ---
-    {
-      id: "dark_wisp",
-      name: "Dark Wisp",
-      icon: "\u{1F47B}",
-      behavior: "rare",
-      disposition: "hostile",
-      // Greift immer an
-      category: "creature",
-      rarity: "rare",
-      level: 8,
-      skillDrops: [
-        { skillId: "dark", chance: 0.5 }
-      ],
-      materialDrops: [],
-      hp: 15,
-      damage: 20,
-      speed: 150,
-      respawnTime: 300,
-      interactRadius: 60,
-      aggroRadius: 60
-    },
-    {
-      id: "light_fairy",
-      name: "Light Fairy",
-      icon: "\u{1F9DA}",
-      behavior: "rare",
-      disposition: "neutral",
-      // Kämpft NIE — nur Analyze sinnvoll
-      category: "creature",
-      rarity: "rare",
-      level: 5,
-      skillDrops: [
-        { skillId: "light", chance: 0.6 }
-      ],
-      materialDrops: [],
-      hp: 10,
-      damage: 0,
-      speed: 180,
-      respawnTime: 300,
-      interactRadius: 80
-    },
-    // ==========================================================
     // PFLANZEN
-    // Alle Pflanzen: disposition "neutral", category "plant"
+    // disposition: "neutral", category: "plant"
     // Fehlschlag: nichts passiert (leblos)
-    // Liefern grow (häufig), photosynthesis (selten), Materialien
     // ==========================================================
     {
-      id: "vine_plant",
-      name: "Vine Plant",
+      id: "grass",
+      name: "Gras",
       icon: "\u{1F33F}",
       behavior: "passive",
       disposition: "neutral",
@@ -951,63 +721,114 @@
       rarity: "common",
       level: 1,
       skillDrops: [
-        { skillId: "earth", chance: 0.7 },
-        { skillId: "poison", chance: 0.5 },
-        { skillId: "grow", chance: 0.85 },
-        // Häufig — jede Pflanze
-        { skillId: "photosynthesis", chance: 0.1 }
-        // Selten
+        { skillId: "photosynthesis", chance: 0.12 }
+        // Selten — besonderer Fund
       ],
       materialDrops: [
-        { materialId: "plant_fiber", amountMin: 1, amountMax: 4, chance: 1 },
-        { materialId: "wood", amountMin: 0, amountMax: 2, chance: 0.4 },
-        { materialId: "seed", amountMin: 0, amountMax: 1, chance: 0.2 }
+        { materialId: "plant_fiber", amountMin: 1, amountMax: 3, chance: 1 }
       ],
-      respawnTime: 20,
+      respawnTime: 60,
+      // 1 Minute — wächst nach
       interactRadius: 50
     },
+    // ==========================================================
+    // INSEKTEN — Level 1 (neutral, defensiv)
+    // ==========================================================
     {
-      id: "poison_mushroom",
-      name: "Poison Mushroom",
-      icon: "\u{1F344}",
-      behavior: "passive",
+      id: "ant",
+      name: "Ameise",
+      icon: "\u{1F41C}",
+      behavior: "defensive",
       disposition: "neutral",
-      category: "plant",
+      // Greift nur an wenn Absorb fehlschlägt
+      category: "creature",
+      rarity: "common",
+      level: 1,
+      skillDrops: [
+        { skillId: "chitin_armor", chance: 0.15 },
+        // Hartes Exoskelett
+        { skillId: "superstrength", chance: 0.1 }
+        // 50x Körpergewicht
+      ],
+      materialDrops: [],
+      hp: 8,
+      damage: 3,
+      speed: 60,
+      respawnTime: 30,
+      interactRadius: 35,
+      aggroRadius: 60
+    },
+    {
+      id: "ladybug",
+      name: "Marienk\xE4fer",
+      icon: "\u{1F41E}",
+      behavior: "defensive",
+      disposition: "neutral",
+      // Greift nur an wenn Absorb fehlschlägt
+      category: "creature",
+      rarity: "common",
+      level: 1,
+      skillDrops: [
+        { skillId: "hemolymph", chance: 0.15 }
+        // Defensivgift bei Treffer
+      ],
+      materialDrops: [],
+      hp: 6,
+      damage: 2,
+      speed: 50,
+      respawnTime: 35,
+      interactRadius: 35,
+      aggroRadius: 50
+    },
+    // ==========================================================
+    // INSEKTEN — Level 2 (feindlich, angreifend)
+    // ==========================================================
+    {
+      id: "jumping_spider",
+      name: "Springspinne",
+      icon: "\u{1F577}\uFE0F",
+      behavior: "aggressive",
+      disposition: "hostile",
+      // Greift immer an bei Fehlschlag
+      category: "creature",
       rarity: "common",
       level: 2,
       skillDrops: [
-        { skillId: "poison", chance: 0.8 },
-        { skillId: "grow", chance: 0.7 },
-        { skillId: "photosynthesis", chance: 0.08 }
+        { skillId: "jump", chance: 0.2 },
+        // Charakteristischer Sprung
+        { skillId: "chitin_armor", chance: 0.1 }
+        // Exoskelett (stärker als Ameise)
       ],
-      materialDrops: [
-        { materialId: "spore", amountMin: 1, amountMax: 3, chance: 1 },
-        { materialId: "plant_fiber", amountMin: 0, amountMax: 2, chance: 0.5 }
-      ],
-      respawnTime: 25,
-      interactRadius: 40
+      materialDrops: [],
+      hp: 18,
+      damage: 8,
+      speed: 100,
+      respawnTime: 45,
+      interactRadius: 40,
+      aggroRadius: 100
     },
-    // ==========================================================
-    // MINERALIEN
-    // Keine Skills außer passive Effekte, nur Materialien
-    // ==========================================================
     {
-      id: "forest_stone",
-      name: "Forest Stone",
-      icon: "\u{1FAA8}",
-      behavior: "passive",
-      disposition: "neutral",
-      category: "mineral",
-      rarity: "common",
-      level: 1,
-      skillDrops: [],
-      // Steine geben keine Skills
-      materialDrops: [
-        { materialId: "stone", amountMin: 1, amountMax: 3, chance: 1 },
-        { materialId: "ore", amountMin: 0, amountMax: 1, chance: 0.1 }
+      id: "poison_spider",
+      name: "Giftspinne",
+      icon: "\u{1F578}\uFE0F",
+      behavior: "aggressive",
+      disposition: "hostile",
+      category: "creature",
+      rarity: "uncommon",
+      level: 2,
+      skillDrops: [
+        { skillId: "venom", chance: 0.2 },
+        // Giftbiss
+        { skillId: "chitin_armor", chance: 0.08 }
+        // Exoskelett
       ],
-      respawnTime: 60,
-      interactRadius: 40
+      materialDrops: [],
+      hp: 15,
+      damage: 6,
+      speed: 80,
+      respawnTime: 50,
+      interactRadius: 40,
+      aggroRadius: 90
     }
   ];
   var ENTITY_MAP = new Map(

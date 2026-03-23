@@ -73,125 +73,81 @@ export const CORE_SKILLS: SkillDefinition[] = [
 // category: "basic", können beliebig ergänzt werden
 // -----------------------------------------------------------
 export const BASE_SKILLS: SkillDefinition[] = [
+
+  // --- INSEKTEN-SKILLS ---
+
   {
-    id: "fire",
-    name: "Fireball",
-    element: "fire",
-    icon: "🔥",
-    category: "basic",
-    activation: "active",
-    maxLevel: 0,
-    baseXpThreshold: 10,
-    xpThresholdMultiplier: 1.5,
-    description: "Schleudert einen Feuerball auf den Feind.",
-    baseDamage: 15,
-    mpCost: 8,
-    cooldownMs: 1500,
-  },
-  {
-    id: "water",
-    name: "Water Jet",
-    element: "water",
-    icon: "💧",
-    category: "basic",
-    activation: "active",
-    maxLevel: 0,
-    baseXpThreshold: 10,
-    xpThresholdMultiplier: 1.5,
-    description: "Ein kraftvoller Wasserstrahl, der Feinde verlangsamt.",
-    baseDamage: 10,
-    mpCost: 6,
-    cooldownMs: 1200,
-  },
-  {
-    id: "earth",
-    name: "Stone Skin",
+    id: "chitin_armor",
+    name: "Chitin Armor",
     element: "earth",
-    icon: "🪨",
+    icon: "🛡️",
     category: "basic",
-    activation: "active",
+    activation: "passive",
     maxLevel: 0,
-    baseXpThreshold: 10,
+    baseXpThreshold: 12,
     xpThresholdMultiplier: 1.5,
-    description: "Verhärtet die Oberfläche des Slimes und erhöht die Verteidigung.",
-    baseDamage: 0,
-    mpCost: 5,
-    cooldownMs: 3000,
+    description:
+      "Passiv: Zieht eine harte Chitinschicht über die Außenhaut. " +
+      "Reduziert eingehenden physischen Schaden. Höheres Level = stärkere Schutzwirkung. " +
+      "Quelle: Ameisen (Lv1) und Spinnen (Lv2).",
   },
   {
-    id: "wind",
-    name: "Wind Slash",
-    element: "wind",
-    icon: "💨",
+    id: "superstrength",
+    name: "Superstrength",
+    element: "none",
+    icon: "💪",
     category: "basic",
-    activation: "active",
+    activation: "passive",
     maxLevel: 0,
-    baseXpThreshold: 10,
+    baseXpThreshold: 15,
     xpThresholdMultiplier: 1.5,
-    description: "Ein schneller Windschnitt, der den Slime kurzzeitig beschleunigt.",
-    baseDamage: 12,
-    mpCost: 7,
-    cooldownMs: 1000,
+    description:
+      "Passiv: Ameisen tragen das 50-fache ihres Körpergewichts — der Slime übernimmt diese Stärke. " +
+      "Materialien werden in größerer Menge absorbiert. Höheres Level = höherer Mengenbonus.",
   },
   {
-    id: "slime",
-    name: "Slime Coat",
-    element: "slime",
-    icon: "🫧",
+    id: "venom",
+    name: "Venom",
+    element: "poison",
+    icon: "🕷️",
+    category: "basic",
+    activation: "passive",
+    maxLevel: 0,
+    baseXpThreshold: 15,
+    xpThresholdMultiplier: 1.5,
+    description:
+      "Passiv: Jeder Treffer des Slimes hat eine Chance, dem Ziel Gift zu injizieren. " +
+      "Gift verursacht Schaden über Zeit. Höheres Level = höhere Vergiftungschance und stärkeres Gift.",
+  },
+  {
+    id: "jump",
+    name: "Pounce",
+    element: "none",
+    icon: "🦘",
     category: "basic",
     activation: "active",
     maxLevel: 0,
-    baseXpThreshold: 8, // Leichter zu leveln — häufigste Quelle
+    baseXpThreshold: 12,
     xpThresholdMultiplier: 1.5,
-    description: "Bedeckt den Slime mit einer klebrigen Schicht, die Angreifer verlangsamt.",
-    baseDamage: 5,
-    mpCost: 4,
+    description:
+      "Springt blitzschnell auf ein Ziel oder einen Punkt zu. " +
+      "Kurze Distanz, hohe Geschwindigkeit. Höheres Level = größere Sprungweite und kürzere Abklingzeit.",
+    mpCost: 6,
     cooldownMs: 2000,
   },
   {
-    id: "poison",
-    name: "Toxic Spit",
+    id: "hemolymph",
+    name: "Hemolymph",
     element: "poison",
-    icon: "☠️",
+    icon: "🐞",
     category: "basic",
-    activation: "active",
+    activation: "passive",
     maxLevel: 0,
-    baseXpThreshold: 12, // Etwas schwerer — weniger Quellen
+    baseXpThreshold: 12,
     xpThresholdMultiplier: 1.5,
-    description: "Spuckt Gift, das über Zeit Schaden verursacht.",
-    baseDamage: 4,
-    mpCost: 9,
-    cooldownMs: 2500,
-  },
-  {
-    id: "dark",
-    name: "Shadow Step",
-    element: "dark",
-    icon: "🌑",
-    category: "basic",
-    activation: "active",
-    maxLevel: 0,
-    baseXpThreshold: 20, // Schwer — selten (Dark Wisp)
-    xpThresholdMultiplier: 1.5,
-    description: "Tritt in den Schatten — Gegner verlieren kurz die Aggro.",
-    baseDamage: 20,
-    mpCost: 12,
-    cooldownMs: 4000,
-  },
-  {
-    id: "light",
-    name: "Holy Beam",
-    element: "light",
-    icon: "✨",
-    category: "basic",
-    activation: "active",
-    maxLevel: 0,
-    baseXpThreshold: 20, // Schwer — selten (Light Fairy, kämpft nie)
-    xpThresholdMultiplier: 1.5,
-    description: "Ein heiliger Lichtstrahl. Light Fairy kämpft nie — nur durch Analyze.",
-    baseDamage: 18,
-    mpCost: 11,
-    cooldownMs: 3500,
+    description:
+      "Passiv: Wird der Slime getroffen, gibt er bitteres Hämolymph ab — " +
+      "der Angreifer erleidet sofort Giftschaden. Höheres Level = stärkerer Rückschlag.",
   },
 ];
 
@@ -201,21 +157,6 @@ export const BASE_SKILLS: SkillDefinition[] = [
 // Neue Pflanzenskills hier eintragen.
 // -----------------------------------------------------------
 export const PLANT_SKILLS: SkillDefinition[] = [
-  {
-    id: "grow",
-    name: "Grow",
-    element: "nature",
-    icon: "🌱",
-    category: "basic",
-    activation: "active",
-    maxLevel: 0,
-    baseXpThreshold: 10,
-    xpThresholdMultiplier: 1.5,
-    description:
-      "Verbraucht Pflanzenfasern um zu wachsen. Erhöht MaxHP und Körpergröße dauerhaft. " +
-      "Höheres Level = stärkeres Wachstum pro Einsatz.",
-    materialCost: [{ materialId: "plant_fiber", amount: 5 }],
-  },
   {
     id: "photosynthesis",
     name: "Photosynthesis",

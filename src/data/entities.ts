@@ -16,155 +16,14 @@ import type { EntityDefinition } from "../types/Entity";
 export const ENTITY_DEFINITIONS: EntityDefinition[] = [
 
   // ==========================================================
-  // KREATUREN
-  // ==========================================================
-
-  // --- SLIMES ---
-  {
-    id: "red_slime",
-    name: "Red Slime",
-    icon: "🔴",
-    behavior: "defensive",
-    disposition: "neutral",   // Greift nur an wenn Absorb fehlschlägt
-    category: "creature",
-    rarity: "common",
-    level: 2,
-    skillDrops: [
-      { skillId: "fire",  chance: 0.80 },
-      { skillId: "slime", chance: 0.90 },
-    ],
-    materialDrops: [],
-    hp: 20, damage: 5, speed: 60,
-    respawnTime: 30,
-    interactRadius: 40,
-    aggroRadius: 80,
-  },
-  {
-    id: "blue_slime",
-    name: "Blue Slime",
-    icon: "🔵",
-    behavior: "defensive",
-    disposition: "neutral",
-    category: "creature",
-    rarity: "common",
-    level: 2,
-    skillDrops: [
-      { skillId: "water", chance: 0.80 },
-      { skillId: "slime", chance: 0.90 },
-    ],
-    materialDrops: [],
-    hp: 20, damage: 5, speed: 55,
-    respawnTime: 30,
-    interactRadius: 40,
-    aggroRadius: 80,
-  },
-
-  // --- WALDWESEN ---
-  {
-    id: "goblin",
-    name: "Goblin",
-    icon: "👺",
-    behavior: "aggressive",
-    disposition: "hostile",   // Greift immer an bei Fehlschlag
-    category: "creature",
-    rarity: "common",
-    level: 3,
-    skillDrops: [
-      { skillId: "fire", chance: 0.60 },
-    ],
-    materialDrops: [],
-    hp: 30, damage: 8, speed: 80,
-    respawnTime: 45,
-    interactRadius: 40,
-    aggroRadius: 120,
-  },
-  {
-    id: "forest_wolf",
-    name: "Forest Wolf",
-    icon: "🐺",
-    behavior: "aggressive",
-    disposition: "hostile",
-    category: "creature",
-    rarity: "uncommon",
-    level: 4,
-    skillDrops: [
-      { skillId: "wind", chance: 0.70 },
-    ],
-    materialDrops: [],
-    hp: 50, damage: 15, speed: 120,
-    respawnTime: 60,
-    interactRadius: 40,
-    aggroRadius: 150,
-  },
-  {
-    id: "stone_golem",
-    name: "Stone Golem",
-    icon: "🗿",
-    behavior: "territorial",
-    disposition: "hostile",
-    category: "creature",
-    rarity: "uncommon",
-    level: 6,
-    skillDrops: [
-      { skillId: "earth", chance: 0.75 },
-    ],
-    materialDrops: [              // Golem hinterlässt Steine
-      { materialId: "stone", amountMin: 1, amountMax: 3, chance: 0.80 },
-      { materialId: "ore",   amountMin: 1, amountMax: 1, chance: 0.20 },
-    ],
-    hp: 120, damage: 25, speed: 40,
-    respawnTime: 120,
-    interactRadius: 60,
-    aggroRadius: 100,
-  },
-
-  // --- SELTENE WESEN ---
-  {
-    id: "dark_wisp",
-    name: "Dark Wisp",
-    icon: "👻",
-    behavior: "rare",
-    disposition: "hostile",   // Greift immer an
-    category: "creature",
-    rarity: "rare",
-    level: 8,
-    skillDrops: [
-      { skillId: "dark", chance: 0.50 },
-    ],
-    materialDrops: [],
-    hp: 15, damage: 20, speed: 150,
-    respawnTime: 300,
-    interactRadius: 60,
-    aggroRadius: 60,
-  },
-  {
-    id: "light_fairy",
-    name: "Light Fairy",
-    icon: "🧚",
-    behavior: "rare",
-    disposition: "neutral",   // Kämpft NIE — nur Analyze sinnvoll
-    category: "creature",
-    rarity: "rare",
-    level: 5,
-    skillDrops: [
-      { skillId: "light", chance: 0.60 },
-    ],
-    materialDrops: [],
-    hp: 10, damage: 0, speed: 180,
-    respawnTime: 300,
-    interactRadius: 80,
-  },
-
-  // ==========================================================
   // PFLANZEN
-  // Alle Pflanzen: disposition "neutral", category "plant"
+  // disposition: "neutral", category: "plant"
   // Fehlschlag: nichts passiert (leblos)
-  // Liefern grow (häufig), photosynthesis (selten), Materialien
   // ==========================================================
 
   {
-    id: "vine_plant",
-    name: "Vine Plant",
+    id: "grass",
+    name: "Gras",
     icon: "🌿",
     behavior: "passive",
     disposition: "neutral",
@@ -172,62 +31,98 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     rarity: "common",
     level: 1,
     skillDrops: [
-      { skillId: "earth",        chance: 0.70 },
-      { skillId: "poison",       chance: 0.50 },
-      { skillId: "grow",         chance: 0.85 }, // Häufig — jede Pflanze
-      { skillId: "photosynthesis", chance: 0.10 }, // Selten
+      { skillId: "photosynthesis", chance: 0.12 }, // Selten — besonderer Fund
     ],
     materialDrops: [
-      { materialId: "plant_fiber", amountMin: 1, amountMax: 4, chance: 1.00 },
-      { materialId: "wood",        amountMin: 0, amountMax: 2, chance: 0.40 },
-      { materialId: "seed",        amountMin: 0, amountMax: 1, chance: 0.20 },
+      { materialId: "plant_fiber", amountMin: 1, amountMax: 3, chance: 1.00 },
     ],
-    respawnTime: 20,
+    respawnTime: 60, // 1 Minute — wächst nach
     interactRadius: 50,
   },
+
+  // ==========================================================
+  // INSEKTEN — Level 1 (neutral, defensiv)
+  // ==========================================================
+
   {
-    id: "poison_mushroom",
-    name: "Poison Mushroom",
-    icon: "🍄",
-    behavior: "passive",
-    disposition: "neutral",
-    category: "plant",
+    id: "ant",
+    name: "Ameise",
+    icon: "🐜",
+    behavior: "defensive",
+    disposition: "neutral",   // Greift nur an wenn Absorb fehlschlägt
+    category: "creature",
+    rarity: "common",
+    level: 1,
+    skillDrops: [
+      { skillId: "chitin_armor",  chance: 0.15 }, // Hartes Exoskelett
+      { skillId: "superstrength", chance: 0.10 }, // 50x Körpergewicht
+    ],
+    materialDrops: [],
+    hp: 8, damage: 3, speed: 60,
+    respawnTime: 30,
+    interactRadius: 35,
+    aggroRadius: 60,
+  },
+  {
+    id: "ladybug",
+    name: "Marienkäfer",
+    icon: "🐞",
+    behavior: "defensive",
+    disposition: "neutral",   // Greift nur an wenn Absorb fehlschlägt
+    category: "creature",
+    rarity: "common",
+    level: 1,
+    skillDrops: [
+      { skillId: "hemolymph", chance: 0.15 }, // Defensivgift bei Treffer
+    ],
+    materialDrops: [],
+    hp: 6, damage: 2, speed: 50,
+    respawnTime: 35,
+    interactRadius: 35,
+    aggroRadius: 50,
+  },
+
+  // ==========================================================
+  // INSEKTEN — Level 2 (feindlich, angreifend)
+  // ==========================================================
+
+  {
+    id: "jumping_spider",
+    name: "Springspinne",
+    icon: "🕷️",
+    behavior: "aggressive",
+    disposition: "hostile",   // Greift immer an bei Fehlschlag
+    category: "creature",
     rarity: "common",
     level: 2,
     skillDrops: [
-      { skillId: "poison",         chance: 0.80 },
-      { skillId: "grow",           chance: 0.70 },
-      { skillId: "photosynthesis", chance: 0.08 },
+      { skillId: "jump",        chance: 0.20 }, // Charakteristischer Sprung
+      { skillId: "chitin_armor", chance: 0.10 }, // Exoskelett (stärker als Ameise)
     ],
-    materialDrops: [
-      { materialId: "spore",       amountMin: 1, amountMax: 3, chance: 1.00 },
-      { materialId: "plant_fiber", amountMin: 0, amountMax: 2, chance: 0.50 },
-    ],
-    respawnTime: 25,
+    materialDrops: [],
+    hp: 18, damage: 8, speed: 100,
+    respawnTime: 45,
     interactRadius: 40,
+    aggroRadius: 100,
   },
-
-  // ==========================================================
-  // MINERALIEN
-  // Keine Skills außer passive Effekte, nur Materialien
-  // ==========================================================
-
   {
-    id: "forest_stone",
-    name: "Forest Stone",
-    icon: "🪨",
-    behavior: "passive",
-    disposition: "neutral",
-    category: "mineral",
-    rarity: "common",
-    level: 1,
-    skillDrops: [],             // Steine geben keine Skills
-    materialDrops: [
-      { materialId: "stone", amountMin: 1, amountMax: 3, chance: 1.00 },
-      { materialId: "ore",   amountMin: 0, amountMax: 1, chance: 0.10 },
+    id: "poison_spider",
+    name: "Giftspinne",
+    icon: "🕸️",
+    behavior: "aggressive",
+    disposition: "hostile",
+    category: "creature",
+    rarity: "uncommon",
+    level: 2,
+    skillDrops: [
+      { skillId: "venom",        chance: 0.20 }, // Giftbiss
+      { skillId: "chitin_armor", chance: 0.08 }, // Exoskelett
     ],
-    respawnTime: 60,
+    materialDrops: [],
+    hp: 15, damage: 6, speed: 80,
+    respawnTime: 50,
     interactRadius: 40,
+    aggroRadius: 90,
   },
 ];
 
