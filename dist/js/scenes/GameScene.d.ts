@@ -1,0 +1,39 @@
+declare const Phaser: any;
+export declare class BootScene extends Phaser.Scene {
+    constructor();
+    create(): void;
+}
+export declare class GameScene extends Phaser.Scene {
+    private gameState;
+    private slimeGraphic;
+    private entitySprites;
+    private cursors;
+    private wasdKeys;
+    private eKey;
+    private qKey;
+    private joy;
+    private readonly JOY_RADIUS;
+    private lastNearbyId;
+    constructor();
+    create(): void;
+    private createWorld;
+    private createPlayer;
+    private createEntities;
+    private createInput;
+    private setupJoystick;
+    private setupGlobalFunctions;
+    update(_time: number, _delta: number): void;
+    private handleMovement;
+    private syncPlayerPosition;
+    private updateEntityVisuals;
+    private checkNearbyEntity;
+    private handleKeyboardInteraction;
+    private applyPassiveSkills;
+    doAbsorb(): void;
+    doAnalyze(): void;
+    doGrow(): void;
+    doCombine(skillIdA: string, skillIdB: string): import("../types/Skill.js").CombineResult;
+    private findEntityNear;
+}
+export {};
+//# sourceMappingURL=GameScene.d.ts.map
