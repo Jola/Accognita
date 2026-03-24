@@ -3,8 +3,9 @@
 
 ---
 
-> **Status**: Konzept-Phase. Das Kampfsystem ist in Prototype v0.1 noch nicht implementiert.
-> Diese Datei beschreibt die geplante Zielversion.
+> **Status v0.2**: Grundkampfsystem implementiert.
+> Echtzeit-Aggro, Nahkampfangriffe, Status-Effekte (DoT/HoT/Auren),
+> Checkpoint-Tod, SkillBar + SkillMenu vollständig spielbar.
 
 ---
 
@@ -15,127 +16,171 @@ Kämpfe sollen sich nicht wie klassische RPG-Schlachten anfühlen. Der Slime ist
 - **Kurz und dynamisch** — kein stundenlanges Grinden.
 - **Optional wann immer möglich** — Analysieren ist oft sinnvoller als Kämpfen.
 - **Skill-getrieben** — Wer viele Skills hat, hat viele Optionen. Wer wenige hat, muss clever sein.
-- **Konsequent** — Sterben bedeutet Ressourcen-Verlust (noch zu definieren: permadeath, soft-death, oder Checkpoint-System).
+- **Konsequent** — Sterben bedeutet Checkpoint (HP/MP zurück auf Max, kein dauerhafter Verlust).
 
 ---
 
 ## 2. Kampf-Ablauf (Echtzeit, Top-Down)
 
-Der Kampf läuft in Echtzeit. Es gibt keine Runden. Der Slime bewegt sich frei und nutzt Skills über Tastenbelegung.
+Der Kampf läuft in Echtzeit. Es gibt keine Runden. Der Slime bewegt sich frei und nutzt Skills über die SkillBar.
 
 ```
-Entity wird aggressiv (Aggro-Radius)
+Entity betritt Aggro-Radius (isAggro = true, roter Tint)
     ↓
-Gegner greift an (Angriffsmuster je nach Typ)
+AiSystem berechnet Bewegungsvektor (Chase + Attack-Throttle)
     ↓
-Spieler weicht aus / blockt / kontert mit Skill
+Entity bewegt sich zum Spieler, greift bei attackRangePx an
     ↓
-Treffer verursacht Schaden / Status-Effekte
+Treffer verursacht Schaden + optionaler Status-Effekt
     ↓
-Entity stirbt → Absorb/Analyze automatisch möglich
+Spieler wehrt sich per SkillBar-Tap → CombatSystem.playerAttack()
+    ↓
+Entity HP ≤ 0 → isAlive = false (respawnt später via EntitySystem)
          ODER
-Entity flieht → Möglichkeit zum verfolgen
+Spieler HP ≤ 0 → Checkpoint (HP/MP voll, Spawn-Position, kein Verlust)
 ```
 
 ---
 
-## 3. Spieler-Kampfwerte
+## 3. Spieler-Kampfwerte (implementiert)
 
 | Attribut | Startwert | Wächst durch |
 |----------|-----------|-------------|
 | HP (Lebenspunkte) | 80 | Level-Up (+10 pro Level) |
 | MP (Magiepunkte) | 40 | Level-Up (+5 pro Level) |
-| Geschwindigkeit | 2.5 | Bestimmte Skills (Wind, Shadow) |
-| Verteidigung | 0 | Earth-Skills, Stone Skin |
-| Resistenz | 0 | Elementar-spezifische Skills |
+| Geschwindigkeit | 180 px/s | geplant: Wind-Skills |
+| Schaden-Multiplikator | 1.0 | Superstrength-Skill (+0.3/Level) |
+| Schadensreduktion | 0 % | Chitin Armor-Skill (10 %+5 %/Level, max 85 %) |
+| MP-Regeneration | 1 MP/s | konstant, passiv |
+
+**Basis-Nahkampfschaden:**
+```
+baseDmg = 3 + absorb.level × 1.5
+effDmg  = baseDmg × calcDamageMult(player.statusEffects)
+```
 
 ---
 
-## 4. Gegner-Typen & Verhalten
+## 4. Entity-Kampfwerte (implementiert)
 
-### Verhaltensmuster
+### Aktuelle Entities mit Kampfwerten
 
-| Typ | Verhalten | Beispiel-Entity |
-|-----|-----------|-----------------|
-| Passiv | Greift nie an, flieht bei Nähe | Vine Plant, Pilz |
-| Defensiv | Greift nur an wenn angegriffen | Blue Slime |
-| Aggressiv | Greift bei Sichtkontakt an | Goblin, Forest Wolf |
-| Territorial | Greift in eigenem Radius an | Stone Golem |
-| Selten/Flüchtig | Taucht kurz auf, flieht sofort | Light Fairy, Dark Wisp |
+| Entity | HP | Schaden | Aggro-Radius | Angriffs-Reichweite | Cooldown |
+|--------|-----|---------|-------------|---------------------|----------|
+| Ameise (ant) | 12 | 3 | 140 px | 40 px | 1800 ms |
+| Marienkäfer (ladybug) | 8 | 2 | 120 px | 38 px | 2000 ms |
+| Springspinne (jumping_spider) | 18 | 5 | 160 px | 55 px | 1200 ms |
+| Giftspinne (poison_spider) | 22 | 4+Gift | 150 px | 50 px | 1600 ms |
+| Gras (grass) | — | — | — | — | passiv |
 
-### Gegner-Beispiele mit Kampfwerten (geplant)
-
-| Entity | HP | Schaden | Skill-Drops | Besonderheit |
-|--------|----|---------|------------|-------------|
-| Goblin | 30 | 8 | fire | Wirft manchmal Steine |
-| Red Slime | 20 | 5 | fire, slime | Teilt sich bei Schaden (geplant) |
-| Blue Slime | 20 | 5 | water, slime | Verlangsamt den Slime |
-| Forest Wolf | 50 | 15 | wind | Schnell, schwer zu treffen |
-| Stone Golem | 120 | 25 | earth | Langsam, sehr viel HP |
-| Dark Wisp | 15 | 20 | dark | Selten, hoher Schaden |
-| Light Fairy | 10 | 0 | light | Kämpft nie, extrem flüchtig |
+### Gegner-Verhalten (AiSystem)
+- **Aggro**: Spieler betritt `aggroRadius` → Entity wird aggressiv (roter Tint)
+- **Chase**: Entity bewegt sich mit `speed` px/s auf Spieler zu; stoppt bei ≤ 20 px
+- **Aggro-Verlust**: Spieler > `aggroRadius × 2.5` entfernt
+- **Angriff**: Nur wenn `attackCooldownRemaining = 0` und Spieler in `attackRangePx`
+- **Performance**: AI wird alle 100 ms berechnet; Entities > 500 px werden übersprungen
 
 ---
 
-## 5. Skill-Einsatz im Kampf
+## 5. Status-Effekte (StatusEffectSystem — implementiert)
+
+Alle Effekte sind einheitlich als `StatusEffect`-Objekte modelliert.
+Passive Skills werden als permanente Effekte (`durationMs: -1`) geführt.
+
+| Effekt-Typ | Wirkung | Beispiel |
+|-----------|---------|---------|
+| `dot` (Damage over Time) | `damagePerTick` / `tickIntervalMs` | Venom-Skill |
+| `hot` (Heal over Time) | `healPerTick` / `tickIntervalMs` | Photosynthesis |
+| `stat_mod` | `speedMultiplier`, `damageBonus`, `damageMult`, `damageReduction` | Chitin Armor, Superstrength |
+| `aura` | `reflectDamage` bei jedem Treffer | Hemolymph |
+
+### Passive Skills → permanente Effekte
+
+| Skill | Effekt-ID | Was passiert |
+|-------|----------|-------------|
+| Chitin Armor | `chitin_armor` | stat_mod: `damageReduction = 0.10 + 0.05×(level-1)` |
+| Superstrength | `superstrength` | stat_mod: `damageMult = 1.0 + 0.3×effectiveness` |
+| Hemolymph | `hemolymph` | aura: `reflectDamage = 2×level` pro Treffer |
+| Photosynthesis | `photosynthesis` | hot: `healPerTick = 0.5×level` alle 1 s |
+
+### Venom (Giftspinne → Spieler, oder Venom-Skill → Entity)
+```
+Schaden/Tick = 2 + 0.5 × (level - 1)
+Dauer        = 4 Sekunden
+Tick-Intervall = 1 Sekunde
+Chance (poison_spider) = 40 %
+Chance (Venom-Skill)   = 30 % + 5 % × level
+```
+
+### Schadensreduktion (Stacking)
+```
+reduction = min(0.85, sum aller damageReduction-Effekte)
+finalDmg  = baseDmg × (1 - reduction)
+```
+
+**Max-Effekte pro Entity:** 8 (ältester Effekt wird verdrängt)
+
+---
+
+## 6. Skill-Einsatz im Kampf (implementiert)
+
+### SkillBar (Touch-Schnellzugriff)
+- 4 konfigurierbare Slots, jeder zeigt Icon + Cooldown-Countdown
+- **Tap** → Skill aktivieren (Angriff oder Dash)
+- **Long-Press (600 ms)** → SkillMenu öffnen
+- Leerer Slot-Tap → SkillMenu öffnen
+
+### SkillMenu (Vollbild-Overlay)
+- Öffnen pausiert das Spiel
+- Alle entdeckten Skills werden angezeigt (Passive klar markiert)
+- **Slot-Buttons (S1–S4)**: Skill einem Slot zuweisen (erneuter Tap = entfernen)
+- **Einsetzen-Button**: Menü schließt, Skill wird direkt aktiviert
 
 ### Ressourcenkosten
-- Jeder Skill verbraucht MP.
-- Kein MP = Skill nicht nutzbar.
-- MP regeneriert sich langsam über Zeit (1 MP/Sekunde, geplant).
+- Jeder aktive Skill verbraucht MP (`mpCost` aus SkillDefinition)
+- Kein MP = Skill nicht nutzbar (`canActivateSkill` gibt Fehlermeldung)
+- MP regeneriert sich passiv (1 MP/Sekunde via `regenMp`)
 
 ### Cooldowns
-- Jeder Skill hat einen individuellen Cooldown.
-- Höheres Skill-Level = kürzerer Cooldown.
+- Pro Skill in `player.skillCooldowns: Map<skillId, expiresAt>`
+- SkillBar zeigt verbleibende Sekunden als Overlay
 
-### Schaden-Formel (Entwurf)
+### Angriffs-Skill (Nahkampf)
 ```
-Schaden = Basis-Schaden * (1 + 0.1 * Skill-Level) * Element-Multiplikator
+Ziel = lastNearbyId (Entity in ≤ 100 px)
+baseDmg = 3 + absorb.level × 1.5
+effDmg  = baseDmg × damageMult
+Venom-Chance: 30 % + 5 % × venom.level
 ```
 
-### Element-Interaktionen (geplant)
-| Angreifer | Verteidiger | Effekt |
-|-----------|------------|--------|
-| fire | earth | +50% Schaden |
-| water | fire | +50% Schaden, löscht Feuer-Effekte |
-| wind | water | +25% Schaden |
-| poison | — | DoT (Schaden über Zeit) |
-| dark | light | Gegenseitige Schwächung |
+### Dash-Skill (Jump)
+```
+Distanz = 160 + 20 × (jump.level - 1) px
+Richtung = Joystick-Vektor (falls inaktiv: kein Bewegungseffekt)
+```
 
 ---
 
-## 6. Status-Effekte
+## 7. Tod & Checkpoint (implementiert)
 
-| Effekt | Auslöser | Dauer | Wirkung |
-|--------|---------|-------|---------|
-| Brennend | fire-Skill | 3 Sek | 5 Schaden/Sek |
-| Vergiftet | poison-Skill | 5 Sek | 3 Schaden/Sek |
-| Verlangsamt | water/earth-Skill | 2 Sek | -50% Bewegung |
-| Betäubt | earth-Skill (Lv5+) | 1 Sek | Keine Aktion |
-| Unsichtbar | dark-Skill | 3 Sek | Gegner verliert Aggro |
+**Checkpoint-System** (Entscheidung vom Entwickler):
 
----
+- HP ≤ 0 → `executeCheckpoint(player)`:
+  - HP und MP werden auf Maximum gesetzt
+  - Spieler-Position springt zu `player.spawnX / spawnY` (400/300)
+  - Alle zeitlich begrenzten StatusEffekte werden entfernt (permanente bleiben)
+  - Alle Entities verlieren ihren Aggro-Status (`resetAi`)
+- Kein dauerhafter Verlust (keine Skill- oder XP-Strafe)
+- Visuelles Feedback: Kamera-Rot-Flash (400 ms)
 
-## 7. Tod & Konsequenzen (noch zu entscheiden)
-
-**Option A – Soft Death (aktuell favorisiert)**
-- Spieler verliert einen Teil der zuletzt gewonnenen EXP.
-- Kein Skill-Verlust.
-- Respawn am letzten sicheren Punkt.
-
-**Option B – Checkpoint-System**
-- Feste Speicherpunkte in der Welt.
-- Tod = zurück zum letzten Checkpoint.
-- Keine EXP-Strafe.
-
-**Option C – Rogue-like (riskant, aber interessant)**
-- Tod = alle Skills verloren, zurück auf Level 1.
-- Welt bleibt teilweise erhalten (Metaprogression).
-- Nur für einen separaten Spielmodus geeignet.
+> **Spawn-Punkte**: Fest auf 400/300 (Mitte von Cluster A).
+> Bewegliche Checkpoints (z. B. in der Nähe von Lagerfeuern) sind für v0.3 geplant.
 
 ---
 
 ## 8. Bosskämpfe (geplant, v0.3+)
+
+> Status: Konzept
 
 - Jede Region hat einen optionalen Boss.
 - Bosse haben einzigartige, nicht anderweitig erhältliche Skills.
@@ -144,4 +189,24 @@ Schaden = Basis-Schaden * (1 + 0.1 * Skill-Level) * Element-Multiplikator
 
 ---
 
-*Letzte Aktualisierung: Konzept-Phase, pre-v0.2*
+## 9. Technische Architektur (implementiert)
+
+```
+types/Combat.ts          ← AttackType, StatusEffect, AttackResult, AiFrame
+systems/StatusEffectSystem.ts  ← alle Effekt-Logik, syncPassiveEffects
+systems/CombatSystem.ts  ← Schaden, Skill-Dispatch, Checkpoint
+systems/AiSystem.ts      ← Aggro, Chase, Attack-Trigger (Phaser-frei)
+ui/SkillBar.ts           ← DOM-Modul, Cooldown-Overlay, Long-Press
+ui/SkillMenu.ts          ← DOM-Overlay, Slot-Zuweisung, Skill-Aktivierung
+scenes/GameScene.ts      ← verdrahtet alle Systeme, Phaser-Rendering
+```
+
+**Performance-Maßnahmen:**
+- Squared-Distance-Checks im AI-Hot-Loop (kein `Math.hypot`)
+- AI-Throttle: 100 ms Mindestabstand zwischen Neuberechnungen pro Entity
+- Skip-Distance: Entities > 500 px vom Spieler werden übersprungen
+- MAX_EFFECTS = 8 pro Entity (ältester Effekt wird verdrängt)
+
+---
+
+*Letzte Aktualisierung: 2026-03-24 — v0.2, Kampfsystem vollständig implementiert*
