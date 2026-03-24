@@ -526,6 +526,12 @@ export class GameScene extends Phaser.Scene {
                         this.showDamageNumber(instance.x, instance.y - 20, reflectDmg, "#ff8800");
                         // Hemolymph: XP für jeden ausgelösten Rückschlag
                         this.skillLevelUp(gainSkillXp(this.gameState.player, "hemolymph", 2), "hemolymph");
+                        if (instance.currentHp <= 0) {
+                            instance.isAlive = false;
+                            instance.respawnAt = Date.now() + (def?.respawnTime ?? 60) * 1000;
+                            resetAi(instance);
+                            addLog(`${def?.icon ?? "?"} ${def?.name ?? "Entity"} wurde vernichtet!`, "system");
+                        }
                     }
                     addLog(result.message, "aggro");
                     this.showDamageNumber(px, py - 30, result.damageDealt, "#ff4444");
@@ -568,6 +574,7 @@ export class GameScene extends Phaser.Scene {
                 }
                 if (instance.currentHp <= 0) {
                     instance.isAlive = false;
+                    instance.respawnAt = Date.now() + (def?.respawnTime ?? 60) * 1000;
                     resetAi(instance);
                     if (def)
                         addLog(`${def.icon} ${def.name} wurde vernichtet!`, "system");
@@ -665,8 +672,9 @@ export class GameScene extends Phaser.Scene {
             this.showDamageNumber(target.x, target.y - 20, result.damageDealt, "#ffffff");
             if (target.currentHp <= 0) {
                 target.isAlive = false;
-                resetAi(target);
                 const def = ENTITY_MAP.get(target.definitionId);
+                target.respawnAt = Date.now() + (def?.respawnTime ?? 60) * 1000;
+                resetAi(target);
                 if (def)
                     addLog(`${def.icon} ${def.name} wurde besiegt!`, "system");
             }

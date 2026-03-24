@@ -2964,6 +2964,12 @@
               instance.currentHp = Math.max(0, instance.currentHp - reflectDmg);
               this.showDamageNumber(instance.x, instance.y - 20, reflectDmg, "#ff8800");
               this.skillLevelUp(gainSkillXp(this.gameState.player, "hemolymph", 2), "hemolymph");
+              if (instance.currentHp <= 0) {
+                instance.isAlive  = false;
+                instance.respawnAt = Date.now() + (def?.respawnTime ?? 60) * 1e3;
+                resetAi(instance);
+                addLog(`${def?.icon ?? "?"} ${def?.name ?? "Entity"} wurde vernichtet!`, "system");
+              }
             }
             addLog(result.message, "aggro");
             this.showDamageNumber(px, py - 30, result.damageDealt, "#ff4444");
@@ -3001,7 +3007,8 @@
             this.showDamageNumber(instance.x, instance.y - 20, -hpDelta, "#44ff88");
           }
           if (instance.currentHp <= 0) {
-            instance.isAlive = false;
+            instance.isAlive  = false;
+            instance.respawnAt = Date.now() + (def?.respawnTime ?? 60) * 1e3;
             resetAi(instance);
             if (def)
               addLog(`${def.icon} ${def.name} wurde vernichtet!`, "system");
@@ -3090,9 +3097,10 @@
         }
         this.showDamageNumber(target.x, target.y - 20, result.damageDealt, "#ffffff");
         if (target.currentHp <= 0) {
-          target.isAlive = false;
-          resetAi(target);
+          target.isAlive  = false;
           const def = ENTITY_MAP.get(target.definitionId);
+          target.respawnAt = Date.now() + (def?.respawnTime ?? 60) * 1e3;
+          resetAi(target);
           if (def)
             addLog(`${def.icon} ${def.name} wurde besiegt!`, "system");
         }
