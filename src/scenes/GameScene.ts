@@ -20,6 +20,7 @@ import {
   getDiscoveredSkillsSorted,
   getXpProgress,
   isMaxLevel,
+  gainSkillXp,
 } from "../systems/SkillSystem.js";
 import {
   absorbEntity,
@@ -520,11 +521,18 @@ export class GameScene extends Phaser.Scene {
           for (const effect of result.statusApplied) {
             applyEffect(this.gameState.player, effect);
           }
+
+          // Chitin Armor: XP für jeden eingesteckten Treffer
+          this.skillLevelUp(gainSkillXp(this.gameState.player, "chitin_armor", 1), "chitin_armor");
+
           const reflectDmg = triggerAuras(this.gameState.player);
           if (reflectDmg > 0) {
             instance.currentHp = Math.max(0, instance.currentHp - reflectDmg);
             this.showDamageNumber(instance.x, instance.y - 20, reflectDmg, "#ff8800");
+            // Hemolymph: XP für jeden ausgelösten Rückschlag
+            this.skillLevelUp(gainSkillXp(this.gameState.player, "hemolymph", 2), "hemolymph");
           }
+
           addLog(result.message, "aggro");
           this.showDamageNumber(px, py - 30, result.damageDealt, "#ff4444");
           updateUI(this.gameState);
@@ -546,6 +554,9 @@ export class GameScene extends Phaser.Scene {
           this.gameState.player.x, this.gameState.player.y - 30,
           -playerHpDelta, "#aa44ff"
         );
+      } else if (playerHpDelta > 0) {
+        // Photosynthesis: XP pro Heilungs-Tick
+        this.skillLevelUp(gainSkillXp(this.gameState.player, "photosynthesis", 1), "photosynthesis");
       }
       updateUI(this.gameState);
     }
@@ -595,6 +606,22 @@ export class GameScene extends Phaser.Scene {
     updateUI(this.gameState);
   }
 
+  /** Level-Up nach gainSkillXp() verarbeiten: Log + syncPassiveEffects */
+  private skillLevelUp(
+    result: { leveledUp: boolean; newLevel?: number },
+    skillId: string
+  ) {
+    if (!result.leveledUp) return;
+    const def = ALL_SKILLS.get(skillId);
+    const icon = def?.icon ?? "⚡";
+    addLog(`⬆️ ${icon} ${def?.name ?? skillId} → Lv.${result.newLevel}!`, "system");
+    // Passive Skills: StatusEffekte sofort aktualisieren
+    if (def?.activation === "passive") {
+      syncPassiveEffects(this.gameState.player);
+    }
+    updateUI(this.gameState);
+  }
+
   private showDamageNumber(x: number, y: number, dmg: number, color: string) {
     const txt = this.add
       .text(x, y, `${Math.round(dmg)}`, {
@@ -640,6 +667,8 @@ export class GameScene extends Phaser.Scene {
           Phaser.Math.Clamp(this.slimeGraphic.y + ny * dist, 0, 1200)
         );
       }
+      // Jump: XP pro Benutzung
+      this.skillLevelUp(gainSkillXp(this.gameState.player, skillId, 1), skillId);
       showToast(`🦘 Sprung! (${dist}px)`, "system");
       updateUI(this.gameState);
       return;
@@ -669,6 +698,15 @@ export class GameScene extends Phaser.Scene {
         if (def) addLog(`${def.icon} ${def.name} wurde besiegt!`, "system");
       }
       addLog(result.message, "absorb");
+
+      // XP durch aktiven Skill-Einsatz
+      this.skillLevelUp(gainSkillXp(this.gameState.player, skillId, 2), skillId);
+      // Superstrength: XP für jeden Nahkampftreffer
+      this.skillLevelUp(gainSkillXp(this.gameState.player, "superstrength", 1), "superstrength");
+      // Venom: XP wenn Vergiftung eingetreten
+      if (result.statusApplied.length > 0) {
+        this.skillLevelUp(gainSkillXp(this.gameState.player, "venom", 3), "venom");
+      }
     } else {
       showToast(result.message, "system");
     }

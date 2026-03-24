@@ -1047,6 +1047,26 @@
   function getSkillEffectiveness(level) {
     return 1 + (level - 1) * 0.1 + (level >= 3 ? 0.15 : 0);
   }
+  function gainSkillXp(player, skillId, amount) {
+    const instance = player.discoveredSkills.get(skillId);
+    if (!instance)
+      return { leveledUp: false };
+    const def = ALL_SKILLS.get(skillId);
+    if (!def || isAtMaxLevel(instance))
+      return { leveledUp: false };
+    instance.currentXp += amount;
+    instance.totalXpEarned += amount;
+    let leveledUp = false;
+    let newLevel;
+    while (instance.currentXp >= instance.xpToNextLevel && !isAtMaxLevel(instance)) {
+      instance.currentXp -= instance.xpToNextLevel;
+      instance.level += 1;
+      instance.xpToNextLevel = calcXpThreshold(def.baseXpThreshold, XP_LEVEL_MULTIPLIER, instance.level);
+      leveledUp = true;
+      newLevel = instance.level;
+    }
+    return { leveledUp, newLevel };
+  }
 
   // dist/js/systems/MaterialSystem.js
   var SUFFIXES = [
@@ -2478,10 +2498,12 @@
             for (const effect of result.statusApplied) {
               applyEffect(this.gameState.player, effect);
             }
+            this.skillLevelUp(gainSkillXp(this.gameState.player, "chitin_armor", 1), "chitin_armor");
             const reflectDmg = triggerAuras(this.gameState.player);
             if (reflectDmg > 0) {
               instance.currentHp = Math.max(0, instance.currentHp - reflectDmg);
               this.showDamageNumber(instance.x, instance.y - 20, reflectDmg, "#ff8800");
+              this.skillLevelUp(gainSkillXp(this.gameState.player, "hemolymph", 2), "hemolymph");
             }
             addLog(result.message, "aggro");
             this.showDamageNumber(px, py - 30, result.damageDealt, "#ff4444");
@@ -2497,6 +2519,8 @@
         this.gameState.player.hp = Math.max(0, Math.min(this.gameState.player.maxHp, this.gameState.player.hp + playerHpDelta));
         if (playerHpDelta < 0) {
           this.showDamageNumber(this.gameState.player.x, this.gameState.player.y - 30, -playerHpDelta, "#aa44ff");
+        } else if (playerHpDelta > 0) {
+          this.skillLevelUp(gainSkillXp(this.gameState.player, "photosynthesis", 1), "photosynthesis");
         }
         updateUI(this.gameState);
       }
@@ -2540,6 +2564,18 @@
       addLog("\u{1F480} Besiegt! Checkpoint \u2014 HP/MP wiederhergestellt.", "system");
       updateUI(this.gameState);
     }
+    /** Level-Up nach gainSkillXp() verarbeiten: Log + syncPassiveEffects */
+    skillLevelUp(result, skillId) {
+      if (!result.leveledUp)
+        return;
+      const def = ALL_SKILLS.get(skillId);
+      const icon = def?.icon ?? "\u26A1";
+      addLog(`\u2B06\uFE0F ${icon} ${def?.name ?? skillId} \u2192 Lv.${result.newLevel}!`, "system");
+      if (def?.activation === "passive") {
+        syncPassiveEffects(this.gameState.player);
+      }
+      updateUI(this.gameState);
+    }
     showDamageNumber(x, y, dmg, color) {
       const txt = this.add.text(x, y, `${Math.round(dmg)}`, {
         fontSize: "13px",
@@ -2575,6 +2611,7 @@
           const ny = dy / len;
           this.slimeGraphic.setPosition(Phaser.Math.Clamp(this.slimeGraphic.x + nx * dist, 0, 1600), Phaser.Math.Clamp(this.slimeGraphic.y + ny * dist, 0, 1200));
         }
+        this.skillLevelUp(gainSkillXp(this.gameState.player, skillId, 1), skillId);
         showToast(`\u{1F998} Sprung! (${dist}px)`, "system");
         updateUI(this.gameState);
         return;
@@ -2600,6 +2637,11 @@
             addLog(`${def.icon} ${def.name} wurde besiegt!`, "system");
         }
         addLog(result.message, "absorb");
+        this.skillLevelUp(gainSkillXp(this.gameState.player, skillId, 2), skillId);
+        this.skillLevelUp(gainSkillXp(this.gameState.player, "superstrength", 1), "superstrength");
+        if (result.statusApplied.length > 0) {
+          this.skillLevelUp(gainSkillXp(this.gameState.player, "venom", 3), "venom");
+        }
       } else {
         showToast(result.message, "system");
       }

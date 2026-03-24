@@ -256,3 +256,42 @@ export function isMaxLevel(instance: SkillInstance): boolean {
 export function getSkillEffectiveness(level: number): number {
   return 1.0 + (level - 1) * 0.1 + (level >= 3 ? 0.15 : 0);
 }
+
+// -----------------------------------------------------------
+// SKILL-XP DURCH BENUTZUNG VERGEBEN
+//
+// Wird aufgerufen wenn ein Skill aktiv eingesetzt wird (aktive Skills)
+// oder sein Effekt ausgelöst wird (passive Skills).
+// Gibt zurück ob ein Level-Up eingetreten ist.
+// -----------------------------------------------------------
+export function gainSkillXp(
+  player: PlayerState,
+  skillId: string,
+  amount: number
+): { leveledUp: boolean; newLevel?: number } {
+  const instance = player.discoveredSkills.get(skillId);
+  if (!instance) return { leveledUp: false };
+
+  const def = ALL_SKILLS.get(skillId);
+  if (!def || isAtMaxLevel(instance)) return { leveledUp: false };
+
+  instance.currentXp += amount;
+  instance.totalXpEarned += amount;
+
+  let leveledUp = false;
+  let newLevel: number | undefined;
+
+  while (instance.currentXp >= instance.xpToNextLevel && !isAtMaxLevel(instance)) {
+    instance.currentXp -= instance.xpToNextLevel;
+    instance.level += 1;
+    instance.xpToNextLevel = calcXpThreshold(
+      def.baseXpThreshold,
+      XP_LEVEL_MULTIPLIER,
+      instance.level
+    );
+    leveledUp = true;
+    newLevel = instance.level;
+  }
+
+  return { leveledUp, newLevel };
+}
