@@ -13,4 +13,8 @@ export declare function getDiscoveredSkillsSorted(player: PlayerState): SkillIns
 export declare function getXpProgress(instance: SkillInstance): number;
 export declare function isMaxLevel(instance: SkillInstance): boolean;
 export declare function getSkillEffectiveness(level: number): number;
+export declare function gainSkillXp(player: PlayerState, skillId: string, amount: number): {
+    leveledUp: boolean;
+    newLevel?: number;
+};
 //# sourceMappingURL=SkillSystem.d.ts.map
