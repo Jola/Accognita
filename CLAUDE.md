@@ -8,7 +8,7 @@ This file is the project constitution. Read it at the start of every session bef
 
 **Absorb & Evolve** is a browser-based Action-RPG inspired by "That Time I Got Reincarnated as a Slime". The player controls a slime that evolves by absorbing or analyzing entities in a medieval fantasy world. Skills are discovered through interaction, leveled through repetition, and combined into new abilities.
 
-Current state: **v0.2** — Modular TypeScript + Phaser.js architecture, Skill-System implemented and isolated.
+Current state: **v0.2** — Modular TypeScript + Phaser.js architecture, Skill-System + Combat-System implemented. Entities are aggressive, attack the player, and can be fought back with skills.
 
 ---
 
@@ -23,15 +23,21 @@ Current state: **v0.2** — Modular TypeScript + Phaser.js architecture, Skill-S
 | `src/types/GameState.ts` | Central game state interfaces |
 | `src/data/skills.ts` | All skill definitions and balancing values |
 | `src/data/entities.ts` | All entity definitions |
+| `src/types/Combat.ts` | AttackType, StatusEffect, AttackResult, AiFrame interfaces |
 | `src/systems/SkillSystem.ts` | Pure skill logic — no Phaser, no DOM, fully testable |
 | `src/systems/EntitySystem.ts` | Absorb/Analyze/Respawn logic |
+| `src/systems/StatusEffectSystem.ts` | DoT/HoT/Aura processing, passive skill sync |
+| `src/systems/CombatSystem.ts` | Damage calculation, skill dispatch, checkpoint logic |
+| `src/systems/AiSystem.ts` | Aggro, chase, attack-trigger (pure logic, no Phaser) |
 | `src/ui/Joystick.ts` | Self-contained virtual joystick — DOM only, no Phaser |
+| `src/ui/SkillBar.ts` | Touch skill slots with cooldown display and long-press menu |
+| `src/ui/SkillMenu.ts` | Full-screen skill management overlay (pauses game) |
 | `src/scenes/GameScene.ts` | Phaser scene — only file that knows about Phaser |
 | `tsconfig.json` | TypeScript compiler configuration |
 | `docs/GDD-00-Index.md` | Meta-document. Explains all GDD files and conventions. |
 | `docs/GDD-01-Hauptbeschreibung.md` | Vision, core loop, setting, progression. |
 | `docs/GDD-02-Skillsystem.md` | Skill discovery, leveling, combinations. |
-| `docs/GDD-03-Kampfsystem.md` | Combat design (concept, not yet implemented). |
+| `docs/GDD-03-Kampfsystem.md` | Combat design — v0.2 implemented. |
 | `docs/GDD-04-LookAndFeel.md` | Colors, typography, UI layout, mobile/desktop, tech stack. |
 
 ---
