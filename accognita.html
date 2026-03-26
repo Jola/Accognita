@@ -221,15 +221,14 @@
       pointer-events:all;
     }
 
-    /* Fullscreen-Exit-Button */
-    #btnFullscreenExit {
+    /* Fullscreen-Toggle-Button: immer sichtbar */
+    #btnFullscreen {
       position:fixed; top:8px; right:12px; width:40px; height:40px; border-radius:50%;
       background:rgba(15,20,32,.92); border:1px solid rgba(255,200,80,.5);
-      color:rgba(255,200,80,.9); font-size:1.1rem; display:none;
+      color:rgba(255,200,80,.9); font-size:1.1rem; display:flex;
       align-items:center; justify-content:center; cursor:pointer; z-index:46;
       pointer-events:all;
     }
-    #btnFullscreenExit.visible { display:flex; }
 
     /* Panel-Toggle: immer sichtbar */
     #btnPanel {
@@ -474,7 +473,7 @@
 <button id="btnSave">💾</button>
 
 <!-- FULLSCREEN-Exit-Button: nur im Fullscreen sichtbar -->
-<button id="btnFullscreenExit" title="Vollbild beenden">⛶</button>
+<button id="btnFullscreen" title="Vollbild">⛶</button>
 
 <!-- MOBILE: Bottom Sheet -->
 <div id="bottomSheet">
@@ -2742,23 +2741,31 @@
     // VOLLBILD
     // ----------------------------------------------------------
     setupFullscreen() {
-      const btn = document.getElementById("btnFullscreenExit");
+      const btn = document.getElementById("btnFullscreen");
+      const updateBtn = (isFs) => {
+        if (!btn) return;
+        btn.textContent = isFs ? "\u2715" : "\u26F6";
+        btn.title = isFs ? "Vollbild beenden" : "Vollbild";
+      };
       const onChange = () => {
         const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+        updateBtn(isFs);
         if (!isFs) {
-          btn?.classList.remove("visible");
           this.pauseGame();
         } else {
-          btn?.classList.add("visible");
           this.resumeGame();
         }
       };
       document.addEventListener("fullscreenchange", onChange);
       document.addEventListener("webkitfullscreenchange", onChange);
-      document.addEventListener("pointerdown", () => this.enterFullscreen(), { once: true });
       btn?.addEventListener("click", (e) => {
         e.stopPropagation();
-        this.exitFullscreen();
+        const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+        if (isFs) {
+          this.exitFullscreen();
+        } else {
+          this.enterFullscreen();
+        }
       });
     }
     enterFullscreen() {

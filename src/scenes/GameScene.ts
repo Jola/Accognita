@@ -327,30 +327,38 @@ export class GameScene extends Phaser.Scene {
   // VOLLBILD
   // ----------------------------------------------------------
   private setupFullscreen() {
-    const btn = document.getElementById("btnFullscreenExit");
+    const btn = document.getElementById("btnFullscreen") as HTMLButtonElement | null;
+
+    const updateBtn = (isFs: boolean) => {
+      if (!btn) return;
+      btn.textContent = isFs ? "✕" : "⛶";
+      btn.title = isFs ? "Vollbild beenden" : "Vollbild";
+    };
+
     const onChange = () => {
       const isFs = !!(
         document.fullscreenElement ||
         (document as any).webkitFullscreenElement
       );
+      updateBtn(isFs);
       if (!isFs) {
-        btn?.classList.remove("visible");
         this.pauseGame();
       } else {
-        btn?.classList.add("visible");
         this.resumeGame();
       }
     };
+
     document.addEventListener("fullscreenchange", onChange);
     document.addEventListener("webkitfullscreenchange", onChange);
 
-    // Beim ersten Tippen/Klicken in den Vollbild-Modus wechseln
-    document.addEventListener("pointerdown", () => this.enterFullscreen(), { once: true });
-
-    // Expliziter Exit-Button
     btn?.addEventListener("click", (e) => {
       e.stopPropagation();
-      this.exitFullscreen();
+      const isFs = !!(document.fullscreenElement || (document as any).webkitFullscreenElement);
+      if (isFs) {
+        this.exitFullscreen();
+      } else {
+        this.enterFullscreen();
+      }
     });
   }
 
