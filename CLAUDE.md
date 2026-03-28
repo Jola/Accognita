@@ -116,6 +116,15 @@ types/   ←  data/  ←  systems/  ←  scenes/
 
 ---
 
+## To-Do-Liste
+
+Bugs, Feature-Ideen und kleine Verbesserungen werden in **`TODO.md`** im Projekt-Root gesammelt.
+
+- Neue Einträge dort hinzufügen, erledigte in den "Erledigt"-Abschnitt verschieben.
+- Nichts aus `TODO.md` implementieren ohne explizite Anweisung vom Entwickler.
+
+---
+
 ## Open Decisions (ask developer before implementing)
 
 - Tod-Mechanik: Soft Death vs. Checkpoint vs. Rogue-like?
