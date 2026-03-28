@@ -22,6 +22,7 @@ export declare class GameScene extends Phaser.Scene {
     private despawnEntitySprite;
     private createPlayer;
     private calcPlayerWorldRadius;
+    private getPlayerAttackRange;
     private updateCameraZoom;
     private setupJoystick;
     private setupFullscreen;
@@ -48,6 +49,7 @@ export declare class GameScene extends Phaser.Scene {
     private syncPlayerPosition;
     private updateEntityVisuals;
     private processEntityAi;
+    private processEntityLeveling;
     private processCombatEffects;
     private checkPlayerDeath;
     /** Level-Up nach gainSkillXp() verarbeiten: Log + syncPassiveEffects */

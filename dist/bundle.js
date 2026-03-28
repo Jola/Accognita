@@ -279,7 +279,9 @@
       ],
       respawnTime: 60,
       // 1 Minute — wächst nach
-      interactRadius: 50
+      interactRadius: 50,
+      worldSize: 5
+      // Grashalm — etwas größer als der Slime auf Level 1
     },
     // ==========================================================
     // INSEKTEN — Level 1 (neutral, defensiv)
@@ -305,13 +307,17 @@
       materialDrops: [],
       hp: 8,
       damage: 3,
-      speed: 60,
-      attackRangePx: 40,
+      speed: 15,
+      // worldSize 3 × 5 = 15
+      attackRangePx: 6,
       attackCooldownMs: 1800,
       attackType: "melee",
+      // 2 × worldSize
       respawnTime: 30,
       interactRadius: 35,
-      aggroRadius: 60
+      aggroRadius: 60,
+      worldSize: 3
+      // Ameise — winziges Insekt, ähnlich groß wie Level-1-Slime
     },
     {
       id: "ladybug",
@@ -330,13 +336,17 @@
       materialDrops: [],
       hp: 6,
       damage: 2,
-      speed: 50,
-      attackRangePx: 38,
+      speed: 20,
+      // worldSize 4 × 5 = 20
+      attackRangePx: 8,
       attackCooldownMs: 2e3,
       attackType: "melee",
+      // 2 × worldSize
       respawnTime: 35,
       interactRadius: 35,
-      aggroRadius: 50
+      aggroRadius: 50,
+      worldSize: 4
+      // Marienkäfer — etwas größer als Ameise
     },
     // ==========================================================
     // INSEKTEN — Level 2 (feindlich, angreifend)
@@ -362,13 +372,17 @@
       materialDrops: [],
       hp: 18,
       damage: 8,
-      speed: 100,
-      attackRangePx: 55,
+      speed: 30,
+      // worldSize 6 × 5 = 30
+      attackRangePx: 12,
       attackCooldownMs: 1200,
       attackType: "charge",
+      // 2 × worldSize
       respawnTime: 45,
       interactRadius: 40,
-      aggroRadius: 100
+      aggroRadius: 100,
+      worldSize: 6
+      // Springspinne — deutlich größer als Ameisen
     },
     {
       id: "poison_spider",
@@ -390,13 +404,17 @@
       materialDrops: [],
       hp: 15,
       damage: 6,
-      speed: 80,
-      attackRangePx: 50,
+      speed: 30,
+      // worldSize 6 × 5 = 30
+      attackRangePx: 12,
       attackCooldownMs: 1600,
       attackType: "melee",
+      // 2 × worldSize
       respawnTime: 50,
       interactRadius: 40,
-      aggroRadius: 90
+      aggroRadius: 90,
+      worldSize: 6
+      // Giftspinne — ähnlich groß wie Springspinne
     }
   ];
   var ENTITY_MAP = new Map(ENTITY_DEFINITIONS.map((e) => [e.id, e]));
@@ -430,6 +448,11 @@
     return abilityLevel / entityLevel;
   }
   var ANALYZE_CHANCE_MODIFIER = 0.7;
+  var PLAYER_WORLD_RADIUS_MIN = 2;
+  var PLAYER_WORLD_RADIUS_MAX = 8;
+  var PLAYER_SIZE_LEVEL_MAX = 20;
+  var PLAYER_SCREEN_RADIUS = 16;
+  var PLAYER_SPEED_PER_WORLD_RADIUS = 7.5;
 
   // dist/js/systems/SkillSystem.js
   function calcXpThreshold(baseThreshold, multiplier, level) {
@@ -465,7 +488,8 @@
       currentXp: 0,
       xpToNextLevel: def.baseXpThreshold,
       discoveredAt: Date.now(),
-      totalXpEarned: 0
+      totalXpEarned: 0,
+      isEnabled: true
     };
   }
   function isAtMaxLevel(instance) {
@@ -1320,7 +1344,7 @@
       spawnX: data.spawnX ?? 400,
       spawnY: data.spawnY ?? 300,
       coreAbilities: data.coreAbilities,
-      discoveredSkills: new Map(data.discoveredSkills),
+      discoveredSkills: new Map(data.discoveredSkills.map(([id, inst]) => [id, { ...inst, isEnabled: inst.isEnabled ?? true }])),
       materials: new Map(data.materials),
       activeSkillSlots: data.activeSkillSlots ?? [null, null, null, null, null],
       // Cooldowns: nach Reload sinnlos — frisch starten
@@ -1640,7 +1664,7 @@
   var MAX_AI_DIST_SQ = 500 * 500;
   var AGGRO_LOSS_FACTOR = 2.5;
   var AI_TICK_MS = 100;
-  var CHASE_STOP_DIST_SQ = 20 * 20;
+  var CHASE_STOP_FACTOR = 0.5;
   function calcEntityAi(def, instance, playerX, playerY, now) {
     if (!def.damage || def.behavior === "passive") {
       return idleFrame();
@@ -1685,7 +1709,8 @@
     let vy = 0;
     if (instance.isAggro && instance.isAlive) {
       const speed = def.speed ?? 60;
-      if (distSq > CHASE_STOP_DIST_SQ) {
+      const stopDist = (def.attackRangePx ?? 60) * CHASE_STOP_FACTOR;
+      if (distSq > stopDist * stopDist) {
         vx = dxRaw / dist * speed;
         vy = dyRaw / dist * speed;
       }
@@ -1718,6 +1743,66 @@
   }
   function shouldAggro2(def) {
     return def.behavior === "aggressive" || def.behavior === "territorial";
+  }
+
+  // dist/js/systems/EntityLevelingSystem.js
+  var MAX_BONUS_LEVEL = 3;
+  var SKILL_WINS_PER_LVL = 3;
+  var HUNT_RADIUS_PX = 300;
+  var STAT_SCALE = 1.25;
+  function getEffectiveLevel(def, instance) {
+    return def.level + (instance.bonusLevel ?? 0);
+  }
+  function getScaledMaxHp(def, bonusLevel) {
+    return Math.round((def.hp ?? 1) * Math.pow(STAT_SCALE, bonusLevel));
+  }
+  function getScaledDamage(def, bonusLevel) {
+    return Math.max(1, Math.round((def.damage ?? 1) * Math.pow(STAT_SCALE, bonusLevel)));
+  }
+  function getScaledSpeed(def, bonusLevel) {
+    return Math.round((def.speed ?? 60) * Math.pow(STAT_SCALE, bonusLevel));
+  }
+  function findLevelingPrey(hunter, hunterDef, allEntities, entityMap) {
+    const hunterLevel = getEffectiveLevel(hunterDef, hunter);
+    const huntRadiusSq = HUNT_RADIUS_PX * HUNT_RADIUS_PX;
+    let best = null;
+    let bestDistSq = Infinity;
+    for (const candidate of allEntities.values()) {
+      if (candidate.instanceId === hunter.instanceId)
+        continue;
+      if (!candidate.isAlive)
+        continue;
+      const candidateDef = entityMap.get(candidate.definitionId);
+      if (!candidateDef || candidateDef.category !== "creature")
+        continue;
+      if (!candidateDef.damage)
+        continue;
+      const levelDiff = hunterLevel - getEffectiveLevel(candidateDef, candidate);
+      if (levelDiff < 1 || levelDiff > 3)
+        continue;
+      const dx = candidate.x - hunter.x;
+      const dy = candidate.y - hunter.y;
+      const distSq = dx * dx + dy * dy;
+      if (distSq <= huntRadiusSq && distSq < bestDistSq) {
+        best = candidate;
+        bestDistSq = distSq;
+      }
+    }
+    return best;
+  }
+  function processEntityVictory(winner, winnerDef) {
+    const currentBonus = winner.bonusLevel ?? 0;
+    if (currentBonus >= MAX_BONUS_LEVEL) {
+      return { skillLeveledUp: false, entityLeveledUp: false };
+    }
+    winner.skillWins = (winner.skillWins ?? 0) + 1;
+    if ((winner.skillWins ?? 0) >= SKILL_WINS_PER_LVL) {
+      winner.skillWins = 0;
+      winner.bonusLevel = currentBonus + 1;
+      winner.currentHp = getScaledMaxHp(winnerDef, winner.bonusLevel);
+      return { skillLeveledUp: true, entityLeveledUp: true };
+    }
+    return { skillLeveledUp: true, entityLeveledUp: false };
   }
 
   // dist/js/types/Combat.js
@@ -1796,6 +1881,8 @@
       const def = ALL_SKILLS.get(skillId);
       if (!def || def.activation !== "passive")
         continue;
+      if (instance.isEnabled === false)
+        continue;
       const effectiveness = getSkillEffectiveness(instance.level);
       switch (skillId) {
         case "chitin_armor": {
@@ -1846,7 +1933,8 @@
         return true;
       const skillId = e.sourceSkillId;
       const def = ALL_SKILLS.get(skillId);
-      return player.discoveredSkills.has(skillId) && def?.activation === "passive";
+      const inst = player.discoveredSkills.get(skillId);
+      return player.discoveredSkills.has(skillId) && def?.activation === "passive" && inst?.isEnabled !== false;
     });
   }
   function calcDamageReduction(effects) {
@@ -2566,7 +2654,7 @@
   }
   function generateSpawns(biome, rng) {
     const spawnTable = BIOME_SPAWNS[biome] ?? ["grass"];
-    const count = 8 + Math.floor(rng() * 7);
+    const count = 16 + Math.floor(rng() * 13);
     const spawns = [];
     for (let i = 0; i < count; i++) {
       const defId = spawnTable[Math.floor(rng() * spawnTable.length)];
@@ -2707,7 +2795,10 @@
           isAggro: false,
           statusEffects: [],
           attackCooldownRemaining: 0,
-          chunkKey: key
+          chunkKey: key,
+          bonusLevel: 0,
+          skillWins: 0,
+          levelingCooldown: 0
         };
         this.gameState.world.entities.set(instanceId, instance);
         this.createEntitySprite(instance);
@@ -2799,7 +2890,7 @@
       this.setupSkillBar();
       this.setupSaveMenu();
       this.cameras.main.startFollow(this.slimeGraphic, true, 0.1, 0.1);
-      this.cameras.main.setZoom(1.5);
+      this.updateCameraZoom();
       updateUI(this.gameState);
       addLog("Du erwachst als Schleim\u2026", "system");
       addLog("Joystick bewegen \xB7 ABSORB + ANALYZE tippen", "system");
@@ -2822,24 +2913,19 @@
       const def = ENTITY_MAP.get(instance.definitionId);
       if (!def)
         return null;
-      const text = this.add.text(instance.x, instance.y, def.icon, { fontSize: "28px" }).setOrigin(0.5).setInteractive();
+      const RENDER_FONT = 28;
+      const worldSize = def.worldSize ?? 5;
+      const text = this.add.text(instance.x, instance.y, def.icon, { fontSize: `${RENDER_FONT}px` }).setOrigin(0.5).setScale(worldSize / RENDER_FONT).setInteractive();
       text.on("pointerdown", () => {
         const dist = Math.hypot(this.gameState.player.x - instance.x, this.gameState.player.y - instance.y);
-        if (dist > 100) {
+        if (dist > this.getPlayerAttackRange()) {
           showToast("N\xE4her herangehen!", "system");
           return;
         }
         this.lastNearbyId = instance.instanceId;
         this.doAbsorb();
       });
-      this.tweens.add({
-        targets: text,
-        y: instance.y - 5,
-        duration: 1e3 + Math.floor(Math.random() * 500),
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.easeInOut"
-      });
+      text.floatPhase = Math.random() * Math.PI * 2;
       this.entitySprites.set(instance.instanceId, text);
       return text;
     }
@@ -2866,15 +2952,23 @@
       g.destroy();
       this.slimeGraphic = this.physics.add.image(this.gameState.player.x, this.gameState.player.y, "slime");
       this.slimeGraphic.setCollideWorldBounds(true);
-      this.tweens.add({
-        targets: this.slimeGraphic,
-        scaleX: 1.08,
-        scaleY: 0.93,
-        duration: 800,
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.easeInOut"
-      });
+    }
+    // Berechnet den Welt-Radius des Slimes für ein gegebenes Level.
+    // Wächst linear von PLAYER_WORLD_RADIUS_MIN bis PLAYER_WORLD_RADIUS_MAX.
+    calcPlayerWorldRadius(level) {
+      const t = Math.min((level - 1) / (PLAYER_SIZE_LEVEL_MAX - 1), 1);
+      return PLAYER_WORLD_RADIUS_MIN + t * (PLAYER_WORLD_RADIUS_MAX - PLAYER_WORLD_RADIUS_MIN);
+    }
+    // Nahkampf-Angriffsreichweite des Slimes in Weltpixeln.
+    // = Rand des Charakters + nochmal eine Charaktergröße = 2 × worldRadius.
+    getPlayerAttackRange() {
+      return this.calcPlayerWorldRadius(this.gameState.player.level) * 2;
+    }
+    // Passt Kamera-Zoom an das aktuelle Level an.
+    // Slime erscheint immer PLAYER_SCREEN_RADIUS px groß.
+    updateCameraZoom() {
+      const worldRadius = this.calcPlayerWorldRadius(this.gameState.player.level);
+      this.cameras.main.setZoom(PLAYER_SCREEN_RADIUS / worldRadius);
     }
     // ----------------------------------------------------------
     // JOYSTICK (Mobile)
@@ -3013,6 +3107,7 @@
       this.gameState.player.maxMp = calcMaxMp(saved.player.level);
       this.gameState.player.hp = Math.min(this.gameState.player.hp, this.gameState.player.maxHp);
       this.gameState.player.mp = Math.min(this.gameState.player.mp, this.gameState.player.maxMp);
+      this.updateCameraZoom();
       syncPassiveEffects(this.gameState.player);
       if (this.skillBar && saved.player.activeSkillSlots) {
         for (let i = 0; i < 4; i++) {
@@ -3044,6 +3139,7 @@
       window.touchAbsorb = () => this.doAbsorb();
       window.touchAnalyze = () => this.doAnalyze();
       window.doGrow = () => this.doGrow();
+      window.togglePassiveSkill = (skillId) => this.togglePassiveSkill(skillId);
       window.resumeFromPause = () => {
         const el = document.documentElement;
         if (el.requestFullscreen || el.webkitRequestFullscreen) {
@@ -3068,14 +3164,24 @@
       this.syncPlayerPosition();
       this.chunkManager.tick(this.gameState.player.x, this.gameState.player.y, Date.now());
       this.processEntityAi(delta);
+      this.processEntityLeveling(delta);
       this.processCombatEffects(delta);
       this.updateEntityVisuals();
+      this.updateSlimeWobble(_time);
       this.checkNearbyEntity();
       this.checkPlayerDeath();
       processRespawns(this.gameState.world);
     }
+    // Setzt Slime-Skalierung (Level-basiert) + organisches Wobble
+    updateSlimeWobble(time) {
+      const worldRadius = this.calcPlayerWorldRadius(this.gameState.player.level);
+      const baseScale = worldRadius / 20;
+      const wobble = Math.sin(time * 628e-5) * 0.04;
+      this.slimeGraphic.setScale(baseScale * (1 + wobble), baseScale * (1 - wobble));
+    }
     handleMovement() {
-      const speed = 180;
+      const worldRadius = this.calcPlayerWorldRadius(this.gameState.player.level);
+      const speed = worldRadius * PLAYER_SPEED_PER_WORLD_RADIUS;
       const body = this.slimeGraphic.body;
       let dx = this.joy.active ? this.joy.dx : 0;
       let dy = this.joy.active ? this.joy.dy : 0;
@@ -3092,6 +3198,7 @@
     }
     updateEntityVisuals() {
       this.hpBarGraphics.clear();
+      const now = this.time.now;
       for (const [id, instance] of this.gameState.world.entities) {
         const sprite = this.entitySprites.get(id);
         if (!sprite)
@@ -3102,17 +3209,25 @@
         }
         if (instance.isAggro) {
           sprite.setTint(16729156);
+        } else if ((instance.bonusLevel ?? 0) > 0) {
+          sprite.setTint(16768324);
+          sprite.setAlpha(1);
         } else {
           sprite.clearTint();
           sprite.setAlpha(1);
         }
+        sprite.x = instance.x;
+        sprite.y = instance.y + Math.sin(now * 1e-3 + sprite.floatPhase) * 2.5;
         const def = ENTITY_MAP.get(instance.definitionId);
-        if (def && def.hp && (instance.currentHp < def.hp || instance.isAggro)) {
-          const ratio = Math.max(0, instance.currentHp / def.hp);
-          const bw = 30;
-          const bh = 4;
+        const scaledMaxHp = def ? getScaledMaxHp(def, instance.bonusLevel ?? 0) : 0;
+        if (def && def.hp && (instance.currentHp < scaledMaxHp || instance.isAggro)) {
+          const ratio = Math.max(0, instance.currentHp / scaledMaxHp);
+          const zoom = this.cameras.main.zoom;
+          const worldSize = def.worldSize ?? 5;
+          const bw = 18 / zoom;
+          const bh = 2.5 / zoom;
           const bx = instance.x - bw / 2;
-          const by = instance.y - 26;
+          const by = instance.y - worldSize * 0.8 - bh;
           this.hpBarGraphics.fillStyle(2236962, 0.8);
           this.hpBarGraphics.fillRect(bx, by, bw, bh);
           const color = ratio > 0.5 ? 4508740 : ratio > 0.25 ? 14526976 : 13378082;
@@ -3148,11 +3263,6 @@
         if ((frame.vx !== 0 || frame.vy !== 0) && instance.isAlive) {
           instance.x += frame.vx * (delta / 1e3);
           instance.y += frame.vy * (delta / 1e3);
-          const sprite = this.entitySprites.get(id);
-          if (sprite) {
-            sprite.x = instance.x;
-            sprite.y = instance.y;
-          }
         }
         if (frame.wantToAttack) {
           setAttackCooldown(instance, def);
@@ -3162,12 +3272,15 @@
             for (const effect of result.statusApplied) {
               applyEffect(this.gameState.player, effect);
             }
-            this.skillLevelUp(gainSkillXp(this.gameState.player, "chitin_armor", 1), "chitin_armor");
+            const absorbed = Math.max(0, (def.damage ?? 1) - result.damageDealt);
+            if (absorbed > 0) {
+              this.skillLevelUp(gainSkillXp(this.gameState.player, "chitin_armor", absorbed), "chitin_armor");
+            }
             const reflectDmg = triggerAuras(this.gameState.player);
             if (reflectDmg > 0) {
               instance.currentHp = Math.max(0, instance.currentHp - reflectDmg);
-              this.showDamageNumber(instance.x, instance.y - 20, reflectDmg, "#ff8800");
-              this.skillLevelUp(gainSkillXp(this.gameState.player, "hemolymph", 2), "hemolymph");
+              this.showDamageNumber(instance.x, instance.y, reflectDmg, "#ff8800");
+              this.skillLevelUp(gainSkillXp(this.gameState.player, "hemolymph", reflectDmg), "hemolymph");
               if (instance.currentHp <= 0) {
                 instance.isAlive = false;
                 instance.respawnAt = Date.now() + (def?.respawnTime ?? 60) * 1e3;
@@ -3176,8 +3289,60 @@
               }
             }
             addLog(result.message, "aggro");
-            this.showDamageNumber(px, py - 30, result.damageDealt, "#ff4444");
+            this.showDamageNumber(px, py, result.damageDealt, "#ff4444");
             updateUI(this.gameState);
+          }
+        }
+      }
+    }
+    // ----------------------------------------------------------
+    // ENTITY-LEVELING-LOOP
+    // Kreaturen jagen schwächere Artgenossen und leveln auf.
+    // ----------------------------------------------------------
+    processEntityLeveling(delta) {
+      const activeIds = this.chunkManager.getActiveEntityIds();
+      for (const [id, hunter] of this.gameState.world.entities) {
+        if (!activeIds.has(id))
+          continue;
+        if (!hunter.isAlive || hunter.isAggro)
+          continue;
+        const hunterDef = ENTITY_MAP.get(hunter.definitionId);
+        if (!hunterDef || hunterDef.category !== "creature" || !hunterDef.damage)
+          continue;
+        if (hunterDef.behavior === "passive")
+          continue;
+        if ((hunter.levelingCooldown ?? 0) > 0) {
+          hunter.levelingCooldown = Math.max(0, (hunter.levelingCooldown ?? 0) - delta);
+        }
+        const prey = findLevelingPrey(hunter, hunterDef, this.gameState.world.entities, ENTITY_MAP);
+        if (!prey || !activeIds.has(prey.instanceId))
+          continue;
+        const dx = prey.x - hunter.x;
+        const dy = prey.y - hunter.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const attackRange = hunterDef.attackRangePx ?? 60;
+        if (dist > attackRange) {
+          const spd = getScaledSpeed(hunterDef, hunter.bonusLevel ?? 0);
+          hunter.x += dx / dist * spd * (delta / 1e3);
+          hunter.y += dy / dist * spd * (delta / 1e3);
+        } else if ((hunter.levelingCooldown ?? 0) <= 0) {
+          hunter.levelingCooldown = hunterDef.attackCooldownMs ?? 1500;
+          const dmg = getScaledDamage(hunterDef, hunter.bonusLevel ?? 0);
+          const preyDef = ENTITY_MAP.get(prey.definitionId);
+          prey.currentHp = Math.max(0, prey.currentHp - dmg);
+          this.showDamageNumber(prey.x, prey.y, dmg, "#ff8800");
+          if (prey.currentHp <= 0) {
+            prey.isAlive = false;
+            prey.respawnAt = Date.now() + (preyDef?.respawnTime ?? 60) * 1e3;
+            resetAi(prey);
+            const result = processEntityVictory(hunter, hunterDef);
+            if (result.entityLeveledUp) {
+              const newLv = getEffectiveLevel(hunterDef, hunter);
+              addLog(`${hunterDef.icon} ${hunterDef.name} steigt auf Stufe ${newLv} auf! \u2728`, "levelup");
+            } else if (result.skillLeveledUp) {
+              const wins = hunter.skillWins ?? 0;
+              addLog(`${hunterDef.icon} ${hunterDef.name} wird st\xE4rker! (${wins}/3)`, "system");
+            }
           }
         }
       }
@@ -3188,9 +3353,9 @@
       if (playerHpDelta !== 0) {
         this.gameState.player.hp = Math.max(0, Math.min(this.gameState.player.maxHp, this.gameState.player.hp + playerHpDelta));
         if (playerHpDelta < 0) {
-          this.showDamageNumber(this.gameState.player.x, this.gameState.player.y - 30, -playerHpDelta, "#aa44ff");
+          this.showDamageNumber(this.gameState.player.x, this.gameState.player.y, -playerHpDelta, "#aa44ff");
         } else if (playerHpDelta > 0) {
-          this.skillLevelUp(gainSkillXp(this.gameState.player, "photosynthesis", 1), "photosynthesis");
+          this.skillLevelUp(gainSkillXp(this.gameState.player, "photosynthesis", playerHpDelta), "photosynthesis");
         }
         updateUI(this.gameState);
       }
@@ -3204,11 +3369,17 @@
           hp: instance.currentHp,
           maxHp: def?.hp ?? 0
         };
+        let venomXp = 0;
+        for (const effect of instance.statusEffects) {
+          if (effect.sourceSkillId === "venom" && effect.type === "dot" && effect.tickIntervalMs > 0 && now - effect.lastTickAt >= effect.tickIntervalMs) {
+            venomXp += effect.damagePerTick;
+          }
+        }
         const hpDelta = processTicks(wrapper, now);
         if (hpDelta !== 0) {
           instance.currentHp = Math.max(0, instance.currentHp + hpDelta);
           if (hpDelta < 0) {
-            this.showDamageNumber(instance.x, instance.y - 20, -hpDelta, "#44ff88");
+            this.showDamageNumber(instance.x, instance.y, -hpDelta, "#44ff88");
           }
           if (instance.currentHp <= 0) {
             instance.isAlive = false;
@@ -3217,6 +3388,9 @@
             if (def)
               addLog(`${def.icon} ${def.name} wurde vernichtet!`, "system");
           }
+        }
+        if (venomXp > 0) {
+          this.skillLevelUp(gainSkillXp(this.gameState.player, "venom", venomXp), "venom");
         }
         removeExpiredEffects(instance, now);
       }
@@ -3254,19 +3428,31 @@
       if (r.leveledUp) {
         const p = this.gameState.player;
         addLog(`\u{1F31F} Charakter \u2192 Lv.${r.newLevel}! (HP: ${p.maxHp} / MP: ${p.maxMp})`, "levelup");
+        this.updateCameraZoom();
       }
     }
+    // Zeigt eine Schadenszahl an der Position (x, y) in Weltkoordinaten.
+    // Schadenszahl in Bildschirmgröße rendern — scharf auf jedem Zoom-Level.
+    //
+    // Trick: Text wird bei voller Bildschirm-Fontgröße (14px) gerendert,
+    // dann per setScale(1/zoom) auf Weltgröße runterskaliert.
+    // Der Kamera-Zoom hebt das wieder auf → exakt 14px auf dem Bildschirm, nie unscharf.
+    // Offset und Rise ebenfalls in Bildschirm-Pixeln, dann durch Zoom geteilt.
     showDamageNumber(x, y, dmg, color) {
-      const txt = this.add.text(x, y, `${Math.round(dmg)}`, {
-        fontSize: "13px",
+      const zoom = this.cameras.main.zoom;
+      const scale = 1 / zoom;
+      const offset = 10 / zoom;
+      const rise = 18 / zoom;
+      const txt = this.add.text(x, y - offset, `${Math.round(dmg)}`, {
+        fontSize: "14px",
         color,
         fontStyle: "bold",
         stroke: "#000000",
         strokeThickness: 3
-      }).setOrigin(0.5).setDepth(20);
+      }).setOrigin(0.5).setScale(scale).setDepth(20);
       this.tweens.add({
         targets: txt,
-        y: y - 38,
+        y: y - offset - rise,
         alpha: 0,
         duration: 900,
         ease: "Power1",
@@ -3308,7 +3494,7 @@
         for (const effect of result.statusApplied) {
           applyEffect(target, effect);
         }
-        this.showDamageNumber(target.x, target.y - 20, result.damageDealt, "#ffffff");
+        this.showDamageNumber(target.x, target.y, result.damageDealt, "#ffffff");
         if (target.currentHp <= 0) {
           target.isAlive = false;
           const def = ENTITY_MAP.get(target.definitionId);
@@ -3318,18 +3504,15 @@
             addLog(`${def.icon} ${def.name} wurde besiegt!`, "system");
         }
         addLog(result.message, "absorb");
-        this.skillLevelUp(gainSkillXp(this.gameState.player, skillId, 2), skillId);
+        this.skillLevelUp(gainSkillXp(this.gameState.player, skillId, result.damageDealt), skillId);
         this.skillLevelUp(gainSkillXp(this.gameState.player, "superstrength", 1), "superstrength");
-        if (result.statusApplied.length > 0) {
-          this.skillLevelUp(gainSkillXp(this.gameState.player, "venom", 3), "venom");
-        }
       } else {
         showToast(result.message, "system");
       }
       updateUI(this.gameState);
     }
     checkNearbyEntity() {
-      const nearest = findNearestEntity(this.gameState.player, this.gameState.world, 100);
+      const nearest = findNearestEntity(this.gameState.player, this.gameState.world, this.getPlayerAttackRange());
       const nearestId = nearest?.instanceId ?? null;
       if (nearestId !== this.lastNearbyId) {
         this.lastNearbyId = nearestId;
@@ -3372,6 +3555,16 @@
       if (result.success)
         updateUI(this.gameState);
     }
+    togglePassiveSkill(skillId) {
+      const inst = this.gameState.player.discoveredSkills.get(skillId);
+      if (!inst)
+        return;
+      inst.isEnabled = inst.isEnabled === false ? true : false;
+      syncPassiveEffects(this.gameState.player);
+      updateUI(this.gameState);
+      const state = inst.isEnabled ? "aktiviert" : "deaktiviert";
+      showToast(`${ALL_SKILLS.get(skillId)?.name ?? skillId} ${state}`, "system");
+    }
     doCombine(skillIdA, skillIdB) {
       const result = combineSkills(this.gameState.player, skillIdA, skillIdB);
       showCombineResult(result);
@@ -3400,6 +3593,8 @@
     setEl("ui-mp", `${p.mp}/${p.maxMp}`);
     setStyle("hp-bar-fill", "width", `${p.hp / p.maxHp * 100}%`);
     setStyle("mp-bar-fill", "width", `${p.mp / p.maxMp * 100}%`);
+    const { xpIntoLevel, xpToNext } = calcPlayerLevel(p.totalExp);
+    setStyle("xp-bar-fill", "width", `${xpIntoLevel / xpToNext * 100}%`);
     setEl("ui-analyze-level", `\u{1F50D} Lv.${p.coreAbilities.analyze.level} (${p.coreAbilities.analyze.currentXp}/${p.coreAbilities.analyze.xpToNextLevel} XP)`);
     setEl("ui-absorb-level", `\u{1F4A5} Lv.${p.coreAbilities.absorb.level} (${p.coreAbilities.absorb.currentXp}/${p.coreAbilities.absorb.xpToNextLevel} XP)`);
     renderSkillList(state);
@@ -3423,14 +3618,16 @@
       const maxed = isMaxLevel(inst);
       const isPassive = def.activation === "passive";
       const hasGrow = def.id === "grow" && !maxed;
+      const enabled = inst.isEnabled !== false;
       return `
-        <div class="skill-card element-${def.element}">
+        <div class="skill-card element-${def.element}${isPassive && !enabled ? " skill-disabled" : ""}">
           <div class="skill-header">
             <span class="skill-icon">${def.icon}</span>
             <span class="skill-name">${def.name}</span>
             ${def.category === "combo" ? '<span class="combo-badge">COMBO</span>' : ""}
             ${isPassive ? '<span class="combo-badge" style="background:#4af0c8;color:#000">PASSIV</span>' : ""}
             <span class="skill-level">Lv.${inst.level}${maxed ? " MAX" : ""}</span>
+            ${isPassive ? `<button class="btn-passive-toggle" onclick="window.togglePassiveSkill('${def.id}')">${enabled ? "AN" : "AUS"}</button>` : ""}
           </div>
           <div class="xp-bar-wrap">
             <div class="xp-bar-fill" style="width:${progress * 100}%"></div>

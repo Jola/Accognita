@@ -18,9 +18,10 @@ import { createSkillMenu } from "../ui/SkillMenu.js";
 import { createSaveMenu } from "../ui/SaveMenu.js";
 import { saveToSlot, loadFromSlot, deleteAllSaves } from "../systems/SaveSystem.js";
 import { calcEntityAi, tickAttackCooldown, setAttackCooldown, resetAi, } from "../systems/AiSystem.js";
+import { getEffectiveLevel, getScaledMaxHp, getScaledDamage, getScaledSpeed, findLevelingPrey, processEntityVictory, } from "../systems/EntityLevelingSystem.js";
 import { playerAttack, entityAttack, canActivateSkill, consumeSkill, calcDashDistance, executeCheckpoint, regenMp, } from "../systems/CombatSystem.js";
 import { processTicks, triggerAuras, applyEffect, removeExpiredEffects, syncPassiveEffects, } from "../systems/StatusEffectSystem.js";
-import { PLAYER_WORLD_RADIUS_MIN, PLAYER_WORLD_RADIUS_MAX, PLAYER_SIZE_LEVEL_MAX, PLAYER_SCREEN_RADIUS, } from "../data/balance.js";
+import { PLAYER_WORLD_RADIUS_MIN, PLAYER_WORLD_RADIUS_MAX, PLAYER_SIZE_LEVEL_MAX, PLAYER_SCREEN_RADIUS, PLAYER_SPEED_PER_WORLD_RADIUS, } from "../data/balance.js";
 import { generateTileset } from "../world/TilesetGenerator.js";
 import { ChunkManager } from "../world/ChunkManager.js";
 import { CHUNK_PX, WORLD_CHUNKS_X, WORLD_CHUNKS_Y } from "../world/Chunk.js";
@@ -100,7 +101,7 @@ export class GameScene extends Phaser.Scene {
             .setInteractive();
         text.on("pointerdown", () => {
             const dist = Math.hypot(this.gameState.player.x - instance.x, this.gameState.player.y - instance.y);
-            if (dist > 100) {
+            if (dist > this.getPlayerAttackRange()) {
                 showToast("Näher herangehen!", "system");
                 return;
             }
@@ -142,6 +143,11 @@ export class GameScene extends Phaser.Scene {
     calcPlayerWorldRadius(level) {
         const t = Math.min((level - 1) / (PLAYER_SIZE_LEVEL_MAX - 1), 1.0);
         return PLAYER_WORLD_RADIUS_MIN + t * (PLAYER_WORLD_RADIUS_MAX - PLAYER_WORLD_RADIUS_MIN);
+    }
+    // Nahkampf-Angriffsreichweite des Slimes in Weltpixeln.
+    // = Rand des Charakters + nochmal eine Charaktergröße = 2 × worldRadius.
+    getPlayerAttackRange() {
+        return this.calcPlayerWorldRadius(this.gameState.player.level) * 2;
     }
     // Passt Kamera-Zoom an das aktuelle Level an.
     // Slime erscheint immer PLAYER_SCREEN_RADIUS px groß.
@@ -364,6 +370,7 @@ export class GameScene extends Phaser.Scene {
         this.syncPlayerPosition();
         this.chunkManager.tick(this.gameState.player.x, this.gameState.player.y, Date.now());
         this.processEntityAi(delta);
+        this.processEntityLeveling(delta);
         this.processCombatEffects(delta);
         this.updateEntityVisuals();
         this.updateSlimeWobble(_time);
@@ -379,7 +386,9 @@ export class GameScene extends Phaser.Scene {
         this.slimeGraphic.setScale(baseScale * (1 + wobble), baseScale * (1 - wobble));
     }
     handleMovement() {
-        const speed = 180;
+        // Geschwindigkeit skaliert mit Weltgröße → Bildschirm-Speed bleibt über alle Level konstant
+        const worldRadius = this.calcPlayerWorldRadius(this.gameState.player.level);
+        const speed = worldRadius * PLAYER_SPEED_PER_WORLD_RADIUS;
         const body = this.slimeGraphic.body;
         let dx = this.joy.active ? this.joy.dx : 0;
         let dy = this.joy.active ? this.joy.dy : 0;
@@ -408,6 +417,11 @@ export class GameScene extends Phaser.Scene {
             if (instance.isAggro) {
                 sprite.setTint(0xff4444);
             }
+            else if ((instance.bonusLevel ?? 0) > 0) {
+                // Gelevelete Entity: goldener Tint als visueller Hinweis
+                sprite.setTint(0xffdd44);
+                sprite.setAlpha(1.0);
+            }
             else {
                 sprite.clearTint();
                 sprite.setAlpha(1.0);
@@ -418,8 +432,9 @@ export class GameScene extends Phaser.Scene {
             // HP-Balken (nur bei Schaden oder Aggro)
             // Breite/Höhe/Abstand in Screen-Pixeln, umgerechnet in Weltkoordinaten via Zoom
             const def = ENTITY_MAP.get(instance.definitionId);
-            if (def && def.hp && (instance.currentHp < def.hp || instance.isAggro)) {
-                const ratio = Math.max(0, instance.currentHp / def.hp);
+            const scaledMaxHp = def ? getScaledMaxHp(def, instance.bonusLevel ?? 0) : 0;
+            if (def && def.hp && (instance.currentHp < scaledMaxHp || instance.isAggro)) {
+                const ratio = Math.max(0, instance.currentHp / scaledMaxHp);
                 const zoom = this.cameras.main.zoom;
                 const worldSize = def.worldSize ?? 5;
                 const bw = 18 / zoom; // 18px Breite auf dem Bildschirm
@@ -473,14 +488,17 @@ export class GameScene extends Phaser.Scene {
                     for (const effect of result.statusApplied) {
                         applyEffect(this.gameState.player, effect);
                     }
-                    // Chitin Armor: XP für jeden eingesteckten Treffer
-                    this.skillLevelUp(gainSkillXp(this.gameState.player, "chitin_armor", 1), "chitin_armor");
+                    // Chitin Armor: XP = tatsächlich absorbierter Schaden
+                    const absorbed = Math.max(0, (def.damage ?? 1) - result.damageDealt);
+                    if (absorbed > 0) {
+                        this.skillLevelUp(gainSkillXp(this.gameState.player, "chitin_armor", absorbed), "chitin_armor");
+                    }
                     const reflectDmg = triggerAuras(this.gameState.player);
                     if (reflectDmg > 0) {
                         instance.currentHp = Math.max(0, instance.currentHp - reflectDmg);
-                        this.showDamageNumber(instance.x, instance.y - 20, reflectDmg, "#ff8800");
-                        // Hemolymph: XP für jeden ausgelösten Rückschlag
-                        this.skillLevelUp(gainSkillXp(this.gameState.player, "hemolymph", 2), "hemolymph");
+                        this.showDamageNumber(instance.x, instance.y, reflectDmg, "#ff8800");
+                        // Hemolymph: XP = zurückgeworfener Schaden
+                        this.skillLevelUp(gainSkillXp(this.gameState.player, "hemolymph", reflectDmg), "hemolymph");
                         if (instance.currentHp <= 0) {
                             instance.isAlive = false;
                             instance.respawnAt = Date.now() + (def?.respawnTime ?? 60) * 1000;
@@ -489,8 +507,66 @@ export class GameScene extends Phaser.Scene {
                         }
                     }
                     addLog(result.message, "aggro");
-                    this.showDamageNumber(px, py - 30, result.damageDealt, "#ff4444");
+                    this.showDamageNumber(px, py, result.damageDealt, "#ff4444");
                     updateUI(this.gameState);
+                }
+            }
+        }
+    }
+    // ----------------------------------------------------------
+    // ENTITY-LEVELING-LOOP
+    // Kreaturen jagen schwächere Artgenossen und leveln auf.
+    // ----------------------------------------------------------
+    processEntityLeveling(delta) {
+        const activeIds = this.chunkManager.getActiveEntityIds();
+        for (const [id, hunter] of this.gameState.world.entities) {
+            if (!activeIds.has(id))
+                continue;
+            if (!hunter.isAlive || hunter.isAggro)
+                continue;
+            const hunterDef = ENTITY_MAP.get(hunter.definitionId);
+            if (!hunterDef || hunterDef.category !== "creature" || !hunterDef.damage)
+                continue;
+            if (hunterDef.behavior === "passive")
+                continue;
+            // Leveling-Cooldown ticken
+            if ((hunter.levelingCooldown ?? 0) > 0) {
+                hunter.levelingCooldown = Math.max(0, (hunter.levelingCooldown ?? 0) - delta);
+            }
+            // Beute suchen (nur aktive Entities)
+            const prey = findLevelingPrey(hunter, hunterDef, this.gameState.world.entities, ENTITY_MAP);
+            if (!prey || !activeIds.has(prey.instanceId))
+                continue;
+            // Auf Beute zubewegen
+            const dx = prey.x - hunter.x;
+            const dy = prey.y - hunter.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const attackRange = hunterDef.attackRangePx ?? 60;
+            if (dist > attackRange) {
+                const spd = getScaledSpeed(hunterDef, hunter.bonusLevel ?? 0);
+                hunter.x += (dx / dist) * spd * (delta / 1000);
+                hunter.y += (dy / dist) * spd * (delta / 1000);
+            }
+            else if ((hunter.levelingCooldown ?? 0) <= 0) {
+                // Angriff
+                hunter.levelingCooldown = hunterDef.attackCooldownMs ?? 1500;
+                const dmg = getScaledDamage(hunterDef, hunter.bonusLevel ?? 0);
+                const preyDef = ENTITY_MAP.get(prey.definitionId);
+                prey.currentHp = Math.max(0, prey.currentHp - dmg);
+                this.showDamageNumber(prey.x, prey.y, dmg, "#ff8800");
+                if (prey.currentHp <= 0) {
+                    prey.isAlive = false;
+                    prey.respawnAt = Date.now() + (preyDef?.respawnTime ?? 60) * 1000;
+                    resetAi(prey);
+                    const result = processEntityVictory(hunter, hunterDef);
+                    if (result.entityLeveledUp) {
+                        const newLv = getEffectiveLevel(hunterDef, hunter);
+                        addLog(`${hunterDef.icon} ${hunterDef.name} steigt auf Stufe ${newLv} auf! ✨`, "levelup");
+                    }
+                    else if (result.skillLeveledUp) {
+                        const wins = hunter.skillWins ?? 0;
+                        addLog(`${hunterDef.icon} ${hunterDef.name} wird stärker! (${wins}/3)`, "system");
+                    }
                 }
             }
         }
@@ -502,11 +578,11 @@ export class GameScene extends Phaser.Scene {
         if (playerHpDelta !== 0) {
             this.gameState.player.hp = Math.max(0, Math.min(this.gameState.player.maxHp, this.gameState.player.hp + playerHpDelta));
             if (playerHpDelta < 0) {
-                this.showDamageNumber(this.gameState.player.x, this.gameState.player.y - 30, -playerHpDelta, "#aa44ff");
+                this.showDamageNumber(this.gameState.player.x, this.gameState.player.y, -playerHpDelta, "#aa44ff");
             }
             else if (playerHpDelta > 0) {
-                // Photosynthesis: XP pro Heilungs-Tick
-                this.skillLevelUp(gainSkillXp(this.gameState.player, "photosynthesis", 1), "photosynthesis");
+                // Photosynthesis: XP = regenerierte Lebenspunkte
+                this.skillLevelUp(gainSkillXp(this.gameState.player, "photosynthesis", playerHpDelta), "photosynthesis");
             }
             updateUI(this.gameState);
         }
@@ -521,11 +597,19 @@ export class GameScene extends Phaser.Scene {
                 hp: instance.currentHp,
                 maxHp: def?.hp ?? 0,
             };
+            // Venom-XP: Schaden fälliger Venom-Ticks zählen (vor processTicks, da lastTickAt danach aktualisiert wird)
+            let venomXp = 0;
+            for (const effect of instance.statusEffects) {
+                if (effect.sourceSkillId === "venom" && effect.type === "dot"
+                    && effect.tickIntervalMs > 0 && now - effect.lastTickAt >= effect.tickIntervalMs) {
+                    venomXp += effect.damagePerTick;
+                }
+            }
             const hpDelta = processTicks(wrapper, now);
             if (hpDelta !== 0) {
                 instance.currentHp = Math.max(0, instance.currentHp + hpDelta);
                 if (hpDelta < 0) {
-                    this.showDamageNumber(instance.x, instance.y - 20, -hpDelta, "#44ff88");
+                    this.showDamageNumber(instance.x, instance.y, -hpDelta, "#44ff88");
                 }
                 if (instance.currentHp <= 0) {
                     instance.isAlive = false;
@@ -534,6 +618,10 @@ export class GameScene extends Phaser.Scene {
                     if (def)
                         addLog(`${def.icon} ${def.name} wurde vernichtet!`, "system");
                 }
+            }
+            // Venom: XP = Schaden der getickten Venom-DoTs
+            if (venomXp > 0) {
+                this.skillLevelUp(gainSkillXp(this.gameState.player, "venom", venomXp), "venom");
             }
             removeExpiredEffects(instance, now);
         }
@@ -575,20 +663,32 @@ export class GameScene extends Phaser.Scene {
             this.updateCameraZoom(); // Welt schrumpft optisch mit dem Level-Up
         }
     }
+    // Zeigt eine Schadenszahl an der Position (x, y) in Weltkoordinaten.
+    // Schadenszahl in Bildschirmgröße rendern — scharf auf jedem Zoom-Level.
+    //
+    // Trick: Text wird bei voller Bildschirm-Fontgröße (14px) gerendert,
+    // dann per setScale(1/zoom) auf Weltgröße runterskaliert.
+    // Der Kamera-Zoom hebt das wieder auf → exakt 14px auf dem Bildschirm, nie unscharf.
+    // Offset und Rise ebenfalls in Bildschirm-Pixeln, dann durch Zoom geteilt.
     showDamageNumber(x, y, dmg, color) {
+        const zoom = this.cameras.main.zoom;
+        const scale = 1 / zoom;
+        const offset = 10 / zoom; // 10 Bildschirmpixel nach oben
+        const rise = 18 / zoom; // 18 Bildschirmpixel Aufstieg
         const txt = this.add
-            .text(x, y, `${Math.round(dmg)}`, {
-            fontSize: "13px",
+            .text(x, y - offset, `${Math.round(dmg)}`, {
+            fontSize: "14px",
             color,
             fontStyle: "bold",
             stroke: "#000000",
             strokeThickness: 3,
         })
             .setOrigin(0.5)
+            .setScale(scale)
             .setDepth(20);
         this.tweens.add({
             targets: txt,
-            y: y - 38,
+            y: y - offset - rise,
             alpha: 0,
             duration: 900,
             ease: "Power1",
@@ -633,7 +733,7 @@ export class GameScene extends Phaser.Scene {
             for (const effect of result.statusApplied) {
                 applyEffect(target, effect);
             }
-            this.showDamageNumber(target.x, target.y - 20, result.damageDealt, "#ffffff");
+            this.showDamageNumber(target.x, target.y, result.damageDealt, "#ffffff");
             if (target.currentHp <= 0) {
                 target.isAlive = false;
                 const def = ENTITY_MAP.get(target.definitionId);
@@ -643,14 +743,11 @@ export class GameScene extends Phaser.Scene {
                     addLog(`${def.icon} ${def.name} wurde besiegt!`, "system");
             }
             addLog(result.message, "absorb");
-            // XP durch aktiven Skill-Einsatz
-            this.skillLevelUp(gainSkillXp(this.gameState.player, skillId, 2), skillId);
+            // XP = angerichteter Schaden (Bite, Biss usw.)
+            this.skillLevelUp(gainSkillXp(this.gameState.player, skillId, result.damageDealt), skillId);
             // Superstrength: XP für jeden Nahkampftreffer
             this.skillLevelUp(gainSkillXp(this.gameState.player, "superstrength", 1), "superstrength");
-            // Venom: XP wenn Vergiftung eingetreten
-            if (result.statusApplied.length > 0) {
-                this.skillLevelUp(gainSkillXp(this.gameState.player, "venom", 3), "venom");
-            }
+            // Venom: XP kommt von den DoT-Ticks in processCombatEffects
         }
         else {
             showToast(result.message, "system");
@@ -658,7 +755,7 @@ export class GameScene extends Phaser.Scene {
         updateUI(this.gameState);
     }
     checkNearbyEntity() {
-        const nearest = findNearestEntity(this.gameState.player, this.gameState.world, 100);
+        const nearest = findNearestEntity(this.gameState.player, this.gameState.world, this.getPlayerAttackRange());
         const nearestId = nearest?.instanceId ?? null;
         if (nearestId !== this.lastNearbyId) {
             this.lastNearbyId = nearestId;
