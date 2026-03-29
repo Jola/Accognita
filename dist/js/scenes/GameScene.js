@@ -19,7 +19,7 @@ import { createSaveMenu } from "../ui/SaveMenu.js";
 import { saveToSlot, loadFromSlot, deleteAllSaves } from "../systems/SaveSystem.js";
 import { calcEntityAi, tickAttackCooldown, tickRangedCooldown, setAttackCooldown, setRangedCooldown, resetAi, } from "../systems/AiSystem.js";
 import { getEffectiveLevel, getScaledMaxHp, getScaledDamage, getScaledSpeed, getEntityBaseDamage, getEntityRangedDamage, findLevelingPrey, processEntityVictory, canFight, } from "../systems/EntityLevelingSystem.js";
-import { playerAttack, entityAttack, canActivateSkill, consumeSkill, calcDashDistance, executeCheckpoint, regenMp, } from "../systems/CombatSystem.js";
+import { playerAttack, entityAttack, canActivateSkill, consumeSkill, executeJump, executeCheckpoint, regenMp, } from "../systems/CombatSystem.js";
 import { processTicks, triggerAuras, applyEffect, removeExpiredEffects, syncPassiveEffects, calcDamageReduction, } from "../systems/StatusEffectSystem.js";
 import { calcHemolymphReflect } from "../systems/SkillEffects.js";
 import { PLAYER_WORLD_RADIUS_MIN, PLAYER_WORLD_RADIUS_MAX, PLAYER_SIZE_LEVEL_MAX, PLAYER_SCREEN_RADIUS, PLAYER_SPEED_PER_WORLD_RADIUS, } from "../data/balance.js";
@@ -756,18 +756,16 @@ export class GameScene extends Phaser.Scene {
         consumeSkill(this.gameState.player, skillId);
         const skillDef = ALL_SKILLS.get(skillId);
         if (skillDef?.attackType === "dash") {
-            const dist = calcDashDistance(this.gameState.player, skillId);
             const dx = this.joy.active ? this.joy.dx : 0;
             const dy = this.joy.active ? this.joy.dy : 0;
             const len = Math.hypot(dx, dy);
             if (len > 0.1) {
-                const nx = dx / len;
-                const ny = dy / len;
-                this.slimeGraphic.setPosition(Phaser.Math.Clamp(this.slimeGraphic.x + nx * dist, 0, 1600), Phaser.Math.Clamp(this.slimeGraphic.y + ny * dist, 0, 1200));
+                const dist = executeJump(this.gameState.player, dx / len, dy / len, skillId, WORLD_CHUNKS_X * CHUNK_PX, WORLD_CHUNKS_Y * CHUNK_PX);
+                this.slimeGraphic.setPosition(this.gameState.player.x, this.gameState.player.y);
+                showToast(`🦘 Sprung! (${Math.round(dist)}px)`, "system");
             }
             // Jump: XP pro Benutzung
             this.skillLevelUp(gainSkillXp(this.gameState.player, skillId, 1), skillId);
-            showToast(`🦘 Sprung! (${dist}px)`, "system");
             updateUI(this.gameState);
             return;
         }

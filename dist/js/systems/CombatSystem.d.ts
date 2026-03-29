@@ -9,6 +9,7 @@ export declare function canActivateSkill(player: PlayerState, skillId: string): 
 };
 export declare function consumeSkill(player: PlayerState, skillId: string): number;
 export declare function calcDashDistance(player: PlayerState, skillId: string): number;
+export declare function executeJump(player: PlayerState, dirX: number, dirY: number, skillId: string, worldW: number, worldH: number): number;
 export declare function executeCheckpoint(player: PlayerState): void;
 export declare function regenMp(player: PlayerState, deltaMs: number): void;
 //# sourceMappingURL=CombatSystem.d.ts.map
