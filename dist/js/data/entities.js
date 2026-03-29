@@ -186,6 +186,32 @@ export const ENTITY_DEFINITIONS = [
         skillLevels: { bite: 18, chitin_armor: 8, venom: 8 },
         worldSize: 10,
     },
+    // ==========================================================
+    // SCHLANGE — Level 10 (feindlich, giftig, schnell)
+    // ==========================================================
+    {
+        id: "snake",
+        name: "Schlange",
+        icon: "🐍",
+        behavior: "aggressive",
+        disposition: "hostile",
+        category: "creature",
+        rarity: "rare",
+        level: 10,
+        skillDrops: [
+            { skillId: "bite", chance: 0.30 }, // Giftzahn-Biss
+            { skillId: "venom", chance: 0.30 }, // Starkes Schlangengift
+        ],
+        materialDrops: [],
+        hp: 120, speed: 60, // worldSize 12 × 5 = 60
+        attackRangePx: 24, attackCooldownMs: 1200, attackType: "melee", // 2 × worldSize
+        respawnTime: 180, // 3 Minuten — seltener Gegner
+        interactRadius: 60,
+        aggroRadius: 30, // 2.5 × worldSize
+        // bite Lv15 → 7×2.55 ≈ 18 Schaden; venom Lv15 → 100% Chance, 9/Tick
+        skillLevels: { bite: 15, venom: 15 },
+        worldSize: 12,
+    },
 ];
 // Schnellzugriffs-Map
 export const ENTITY_MAP = new Map(ENTITY_DEFINITIONS.map((e) => [e.id, e]));

@@ -50,8 +50,8 @@ export const BIOME_SPAWNS: Record<BiomeId, string[]> = {
   swamp:    ["poison_spider", "grass"],
   highland: ["jumping_spider", "ant", "small_scorpion"],
   mountain: ["jumping_spider", "poison_spider", "small_scorpion"],
-  desert:   ["ant", "small_scorpion", "large_scorpion"],
-  dungeon:  ["jumping_spider", "poison_spider", "large_scorpion"],
+  desert:   ["ant", "small_scorpion", "large_scorpion", "snake"],
+  dungeon:  ["jumping_spider", "poison_spider", "large_scorpion", "snake"],
 };
 
 // ────────────────────────────────────────
