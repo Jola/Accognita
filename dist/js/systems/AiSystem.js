@@ -16,6 +16,7 @@
 //   - AI-Update nur alle AI_TICK_MS ms pro Entity (Throttle)
 //     gespeichert in instance._aiLastCalcAt (privates Feld)
 // ============================================================
+import { canFight } from "./EntityLevelingSystem";
 // -----------------------------------------------------------
 // Konstanten
 // -----------------------------------------------------------
@@ -49,7 +50,7 @@ const WANDER_ARRIVE_SQ = 10 * 10; // Gilt als "angekommen" innerhalb 10px
 // -----------------------------------------------------------
 export function calcEntityAi(def, instance, playerX, playerY, now) {
     // Entities ohne Kampfwerte (Pflanzen, Mineralien) bekommen keine AI
-    if (!def.damage || def.behavior === "passive") {
+    if (!canFight(def) || def.behavior === "passive") {
         return idleFrame();
     }
     // Distance check (squared — kein sqrt)
@@ -78,7 +79,7 @@ export function calcEntityAi(def, instance, playerX, playerY, now) {
     instance._aiLastCalcAt = now;
     const dist = Math.sqrt(distSq); // sqrt nur 1× nach dem Throttle
     // --- Aggro-Check ---
-    const aggroRadius = def.aggroRadius ?? (def.worldSize ?? 6) * 5;
+    const aggroRadius = def.aggroRadius ?? (def.worldSize ?? 6) * 2.5;
     const aggroLossRadius = aggroRadius * AGGRO_LOSS_FACTOR;
     let becameAggro = false;
     let lostAggro = false;

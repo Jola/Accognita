@@ -60,12 +60,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       { skillId: "superstrength", chance: 0.10 }, // 50x Körpergewicht
     ],
     materialDrops: [],
-    hp: 8, damage: 3, speed: 15,   // worldSize 3 × 5 = 15
+    hp: 8, speed: 15,              // worldSize 3 × 5 = 15
     attackRangePx: 6, attackCooldownMs: 1800, attackType: "melee",  // 2 × worldSize
     respawnTime: 30,
     interactRadius: 35,
-    aggroRadius: 15,   // 5 × worldSize
-    skillLevels: { chitin_armor: 1 },   // 10% DR
+    aggroRadius: 8,    // 2.5 × worldSize
+    skillLevels: { bite: 1, chitin_armor: 1 },   // bite Lv1 → 7 Schaden; chitin → 10% DR
     worldSize: 3,    // Ameise — winziges Insekt, ähnlich groß wie Level-1-Slime
   },
   {
@@ -81,11 +81,14 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       { skillId: "hemolymph", chance: 0.15 }, // Defensivgift bei Treffer
     ],
     materialDrops: [],
-    hp: 6, damage: 2, speed: 20,   // worldSize 4 × 5 = 20
+    hp: 6, speed: 20,              // worldSize 4 × 5 = 20
     attackRangePx: 8, attackCooldownMs: 2000, attackType: "melee",   // 2 × worldSize
     respawnTime: 35,
     interactRadius: 35,
-    aggroRadius: 20,   // 5 × worldSize
+    aggroRadius: 10,   // 2.5 × worldSize
+    // Kein bite — Marienkäfer greifen nicht aktiv an.
+    // Hemolymph Lv1: 2 Rückschlag-Schaden wenn der Slime ihn trifft.
+    skillLevels: { hemolymph: 1 },
     worldSize: 4,    // Marienkäfer — etwas größer als Ameise
   },
 
@@ -112,7 +115,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     attackRangePx: 12, attackCooldownMs: 1200, attackType: "charge", // 2 × worldSize
     respawnTime: 45,
     interactRadius: 40,
-    aggroRadius: 30,   // 5 × worldSize
+    aggroRadius: 15,   // 2.5 × worldSize
     // bite Lv2 → 7 × 1.1 ≈ 8 Schaden; chitin_armor Lv3 → 20% DR
     skillLevels: { bite: 2, chitin_armor: 3 },
     worldSize: 6,    // Springspinne — deutlich größer als Ameisen
@@ -136,7 +139,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     attackRangePx: 12, attackCooldownMs: 1600, attackType: "melee",  // 2 × worldSize
     respawnTime: 50,
     interactRadius: 40,
-    aggroRadius: 30,   // 5 × worldSize
+    aggroRadius: 15,   // 2.5 × worldSize
     // bite Lv1 → 7 Schaden; venom Lv3 → 40% Chance, 3/Tick; chitin_armor Lv3 → 20% DR
     skillLevels: { bite: 1, venom: 3, chitin_armor: 3 },
     worldSize: 6,    // Giftspinne — ähnlich groß wie Springspinne
@@ -165,7 +168,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     attackRangePx: 14, attackCooldownMs: 1400, attackType: "melee",  // 2 × worldSize
     respawnTime: 60,
     interactRadius: 45,
-    aggroRadius: 35,            // 5 × worldSize
+    aggroRadius: 18,            // 2.5 × worldSize
     // bite Lv6 → 7×1.65 ≈ 12 Schaden; chitin Lv5 → 30% DR; venom Lv5 → 50%/4Tick
     skillLevels: { bite: 6, chitin_armor: 5, venom: 5 },
     worldSize: 7,
@@ -189,7 +192,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     attackRangePx: 20, attackCooldownMs: 1600, attackType: "melee",  // 2 × worldSize
     respawnTime: 120,
     interactRadius: 55,
-    aggroRadius: 50,            // 5 × worldSize
+    aggroRadius: 25,            // 2.5 × worldSize
     // bite Lv18 → 7×2.85 ≈ 20 Schaden; chitin Lv8 → 45% DR; venom Lv8 → 65%/5Tick
     skillLevels: { bite: 18, chitin_armor: 8, venom: 8 },
     worldSize: 10,

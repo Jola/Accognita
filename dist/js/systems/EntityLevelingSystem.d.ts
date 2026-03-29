@@ -1,4 +1,5 @@
 import type { EntityDefinition, EntityInstance } from "../types/Entity";
+export declare function canFight(def: EntityDefinition): boolean;
 export declare function getEffectiveLevel(def: EntityDefinition, instance: EntityInstance): number;
 export declare function getScaledMaxHp(def: EntityDefinition, bonusLevel: number): number;
 /** Basisschaden einer Entity — aus bite-Skill-Level oder standalone damage. */

@@ -57,6 +57,7 @@ import {
   getEntityBaseDamage,
   findLevelingPrey,
   processEntityVictory,
+  canFight,
 } from "../systems/EntityLevelingSystem.js";
 import {
   playerAttack,
@@ -74,6 +75,7 @@ import {
   removeExpiredEffects,
   syncPassiveEffects,
 } from "../systems/StatusEffectSystem.js";
+import { calcHemolymphReflect } from "../systems/SkillEffects.js";
 import {
   PLAYER_WORLD_RADIUS_MIN,
   PLAYER_WORLD_RADIUS_MAX,
@@ -660,7 +662,7 @@ export class GameScene extends Phaser.Scene {
       if (!hunter.isAlive || hunter.isAggro) continue;
 
       const hunterDef = ENTITY_MAP.get(hunter.definitionId);
-      if (!hunterDef || hunterDef.category !== "creature" || !hunterDef.damage) continue;
+      if (!hunterDef || hunterDef.category !== "creature" || !canFight(hunterDef)) continue;
       if (hunterDef.behavior === "passive") continue;
 
       // Leveling-Cooldown ticken
@@ -910,13 +912,31 @@ export class GameScene extends Phaser.Scene {
         applyEffect(target, effect);
       }
       this.showDamageNumber(target.x, target.y, result.damageDealt, "#ffffff");
+
+      const def = ENTITY_MAP.get(target.definitionId);
+
       if (target.currentHp <= 0) {
         target.isAlive  = false;
-        const def = ENTITY_MAP.get(target.definitionId);
         target.respawnAt = Date.now() + (def?.respawnTime ?? 60) * 1000;
         resetAi(target);
         if (def) addLog(`${def.icon} ${def.name} wurde besiegt!`, "system");
+      } else {
+        // Angegriffene Entity wird sofort aggro (Gegenwehr)
+        target.isAggro = true;
+
+        // Hemolymph: Rückschlag-Schaden wenn Entity diesen Skill trägt
+        const hemolymphLv = def?.skillLevels?.["hemolymph"] ?? 0;
+        if (hemolymphLv > 0) {
+          const reflectDmg = calcHemolymphReflect(hemolymphLv);
+          this.gameState.player.hp = Math.max(0, this.gameState.player.hp - reflectDmg);
+          this.showDamageNumber(
+            this.gameState.player.x, this.gameState.player.y,
+            reflectDmg, "#ff8800"
+          );
+          addLog(`${def?.icon ?? "🐞"} Hemolymph! ${reflectDmg} Rückschlag-Schaden.`, "aggro");
+        }
       }
+
       addLog(result.message, "absorb");
 
       // XP = angerichteter Schaden (Bite, Biss usw.)

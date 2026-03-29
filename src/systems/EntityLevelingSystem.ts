@@ -24,6 +24,17 @@ const HUNT_RADIUS_PX     = 300;  // Suchradius für Beute (px)
 const STAT_SCALE         = 1.25; // Kampfwert-Faktor pro bonusLevel
 
 // -----------------------------------------------------------
+// Kampffähigkeit prüfen
+//
+// Eine Entity kann kämpfen wenn sie entweder einen eigenständigen
+// damage-Wert hat ODER den bite-Skill in skillLevels trägt.
+// Wird an mehreren Stellen genutzt (AiSystem, GameScene, findLevelingPrey).
+// -----------------------------------------------------------
+export function canFight(def: EntityDefinition): boolean {
+  return !!(def.damage ?? def.skillLevels?.["bite"]);
+}
+
+// -----------------------------------------------------------
 // Effektives Level (Basislevel + Bonuslevel)
 // -----------------------------------------------------------
 export function getEffectiveLevel(
@@ -81,7 +92,7 @@ export function findLevelingPrey(
 
     const candidateDef = entityMap.get(candidate.definitionId);
     if (!candidateDef || candidateDef.category !== "creature") continue;
-    if (!candidateDef.damage) continue;
+    if (!canFight(candidateDef)) continue;
 
     const levelDiff = hunterLevel - getEffectiveLevel(candidateDef, candidate);
     if (levelDiff < 1 || levelDiff > 3) continue;

@@ -19,6 +19,7 @@
 
 import type { EntityDefinition, EntityInstance } from "../types/Entity";
 import type { AiFrame } from "../types/Combat";
+import { canFight } from "./EntityLevelingSystem";
 
 // -----------------------------------------------------------
 // Konstanten
@@ -65,7 +66,7 @@ export function calcEntityAi(
   now: number
 ): AiFrame {
   // Entities ohne Kampfwerte (Pflanzen, Mineralien) bekommen keine AI
-  if (!def.damage || def.behavior === "passive") {
+  if (!canFight(def) || def.behavior === "passive") {
     return idleFrame();
   }
 
@@ -99,7 +100,7 @@ export function calcEntityAi(
   const dist = Math.sqrt(distSq); // sqrt nur 1× nach dem Throttle
 
   // --- Aggro-Check ---
-  const aggroRadius = def.aggroRadius ?? (def.worldSize ?? 6) * 5;
+  const aggroRadius = def.aggroRadius ?? (def.worldSize ?? 6) * 2.5;
   const aggroLossRadius = aggroRadius * AGGRO_LOSS_FACTOR;
 
   let becameAggro = false;

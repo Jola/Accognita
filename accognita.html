@@ -831,7 +831,6 @@
       ],
       materialDrops: [],
       hp: 8,
-      damage: 3,
       speed: 15,
       // worldSize 3 × 5 = 15
       attackRangePx: 6,
@@ -840,10 +839,10 @@
       // 2 × worldSize
       respawnTime: 30,
       interactRadius: 35,
-      aggroRadius: 15,
-      // 5 × worldSize
-      skillLevels: { chitin_armor: 1 },
-      // 10% DR
+      aggroRadius: 8,
+      // 2.5 × worldSize
+      skillLevels: { bite: 1, chitin_armor: 1 },
+      // bite Lv1 → 7 Schaden; chitin → 10% DR
       worldSize: 3
       // Ameise — winziges Insekt, ähnlich groß wie Level-1-Slime
     },
@@ -863,7 +862,6 @@
       ],
       materialDrops: [],
       hp: 6,
-      damage: 2,
       speed: 20,
       // worldSize 4 × 5 = 20
       attackRangePx: 8,
@@ -872,8 +870,11 @@
       // 2 × worldSize
       respawnTime: 35,
       interactRadius: 35,
-      aggroRadius: 20,
-      // 5 × worldSize
+      aggroRadius: 10,
+      // 2.5 × worldSize
+      // Kein bite — Marienkäfer greifen nicht aktiv an.
+      // Hemolymph Lv1: 2 Rückschlag-Schaden wenn der Slime ihn trifft.
+      skillLevels: { hemolymph: 1 },
       worldSize: 4
       // Marienkäfer — etwas größer als Ameise
     },
@@ -908,8 +909,8 @@
       // 2 × worldSize
       respawnTime: 45,
       interactRadius: 40,
-      aggroRadius: 30,
-      // 5 × worldSize
+      aggroRadius: 15,
+      // 2.5 × worldSize
       // bite Lv2 → 7 × 1.1 ≈ 8 Schaden; chitin_armor Lv3 → 20% DR
       skillLevels: { bite: 2, chitin_armor: 3 },
       worldSize: 6
@@ -942,8 +943,8 @@
       // 2 × worldSize
       respawnTime: 50,
       interactRadius: 40,
-      aggroRadius: 30,
-      // 5 × worldSize
+      aggroRadius: 15,
+      // 2.5 × worldSize
       // bite Lv1 → 7 Schaden; venom Lv3 → 40% Chance, 3/Tick; chitin_armor Lv3 → 20% DR
       skillLevels: { bite: 1, venom: 3, chitin_armor: 3 },
       worldSize: 6
@@ -978,8 +979,8 @@
       // 2 × worldSize
       respawnTime: 60,
       interactRadius: 45,
-      aggroRadius: 35,
-      // 5 × worldSize
+      aggroRadius: 18,
+      // 2.5 × worldSize
       // bite Lv6 → 7×1.65 ≈ 12 Schaden; chitin Lv5 → 30% DR; venom Lv5 → 50%/4Tick
       skillLevels: { bite: 6, chitin_armor: 5, venom: 5 },
       worldSize: 7
@@ -1010,8 +1011,8 @@
       // 2 × worldSize
       respawnTime: 120,
       interactRadius: 55,
-      aggroRadius: 50,
-      // 5 × worldSize
+      aggroRadius: 25,
+      // 2.5 × worldSize
       // bite Lv18 → 7×2.85 ≈ 20 Schaden; chitin Lv8 → 45% DR; venom Lv8 → 65%/5Tick
       skillLevels: { bite: 18, chitin_armor: 8, venom: 8 },
       worldSize: 10
@@ -2260,6 +2261,105 @@
     return { open, close };
   }
 
+  // dist/js/systems/SkillEffects.js
+  function calcChitinDr(level) {
+    return Math.min(0.1 + (level - 1) * 0.05, 0.7);
+  }
+  function calcVenomChance(level) {
+    return 0.3 + (level - 1) * 0.05;
+  }
+  function calcVenomDmgPerTick(level) {
+    return 2 + Math.floor((level - 1) * 0.5);
+  }
+  function calcBiteDamage(level) {
+    const baseDamage = ALL_SKILLS.get("bite")?.baseDamage ?? 7;
+    return Math.max(1, Math.round(baseDamage * getSkillEffectiveness(level)));
+  }
+  var JUMP_BASE_PX = 160;
+  var JUMP_BONUS_PER_LEVEL = 20;
+  function calcJumpDistance(level) {
+    return JUMP_BASE_PX + (level - 1) * JUMP_BONUS_PER_LEVEL;
+  }
+  function calcHemolymphReflect(level) {
+    return 2 * level;
+  }
+  function calcSuperstrengthMult(level) {
+    return 1 + 0.3 * getSkillEffectiveness(level);
+  }
+  function calcPhotosynthesisHeal(level) {
+    return 0.5 * level;
+  }
+
+  // dist/js/systems/EntityLevelingSystem.js
+  var MAX_BONUS_LEVEL = 3;
+  var SKILL_WINS_PER_LVL = 3;
+  var HUNT_RADIUS_PX = 300;
+  var STAT_SCALE = 1.25;
+  function canFight(def) {
+    return !!(def.damage ?? def.skillLevels?.["bite"]);
+  }
+  function getEffectiveLevel(def, instance) {
+    return def.level + (instance.bonusLevel ?? 0);
+  }
+  function getScaledMaxHp(def, bonusLevel) {
+    return Math.round((def.hp ?? 1) * Math.pow(STAT_SCALE, bonusLevel));
+  }
+  function getEntityBaseDamage(def) {
+    const biteLevel = def.skillLevels?.["bite"];
+    if (biteLevel !== void 0) {
+      return calcBiteDamage(biteLevel);
+    }
+    return def.damage ?? 1;
+  }
+  function getScaledDamage(def, bonusLevel) {
+    return Math.max(1, Math.round(getEntityBaseDamage(def) * Math.pow(STAT_SCALE, bonusLevel)));
+  }
+  function getScaledSpeed(def, bonusLevel) {
+    return Math.round((def.speed ?? 60) * Math.pow(STAT_SCALE, bonusLevel));
+  }
+  function findLevelingPrey(hunter, hunterDef, allEntities, entityMap) {
+    const hunterLevel = getEffectiveLevel(hunterDef, hunter);
+    const huntRadiusSq = HUNT_RADIUS_PX * HUNT_RADIUS_PX;
+    let best = null;
+    let bestDistSq = Infinity;
+    for (const candidate of allEntities.values()) {
+      if (candidate.instanceId === hunter.instanceId)
+        continue;
+      if (!candidate.isAlive)
+        continue;
+      const candidateDef = entityMap.get(candidate.definitionId);
+      if (!candidateDef || candidateDef.category !== "creature")
+        continue;
+      if (!canFight(candidateDef))
+        continue;
+      const levelDiff = hunterLevel - getEffectiveLevel(candidateDef, candidate);
+      if (levelDiff < 1 || levelDiff > 3)
+        continue;
+      const dx = candidate.x - hunter.x;
+      const dy = candidate.y - hunter.y;
+      const distSq = dx * dx + dy * dy;
+      if (distSq <= huntRadiusSq && distSq < bestDistSq) {
+        best = candidate;
+        bestDistSq = distSq;
+      }
+    }
+    return best;
+  }
+  function processEntityVictory(winner, winnerDef) {
+    const currentBonus = winner.bonusLevel ?? 0;
+    if (currentBonus >= MAX_BONUS_LEVEL) {
+      return { skillLeveledUp: false, entityLeveledUp: false };
+    }
+    winner.skillWins = (winner.skillWins ?? 0) + 1;
+    if ((winner.skillWins ?? 0) >= SKILL_WINS_PER_LVL) {
+      winner.skillWins = 0;
+      winner.bonusLevel = currentBonus + 1;
+      winner.currentHp = getScaledMaxHp(winnerDef, winner.bonusLevel);
+      return { skillLeveledUp: true, entityLeveledUp: true };
+    }
+    return { skillLeveledUp: true, entityLeveledUp: false };
+  }
+
   // dist/js/systems/AiSystem.js
   var MAX_AI_DIST_SQ = 500 * 500;
   var AGGRO_LOSS_FACTOR = 2.5;
@@ -2272,7 +2372,7 @@
   var WANDER_PAUSE_MAX = 4e3;
   var WANDER_ARRIVE_SQ = 10 * 10;
   function calcEntityAi(def, instance, playerX, playerY, now) {
-    if (!def.damage || def.behavior === "passive") {
+    if (!canFight(def) || def.behavior === "passive") {
       return idleFrame();
     }
     const dxRaw = playerX - instance.x;
@@ -2296,7 +2396,7 @@
     }
     instance._aiLastCalcAt = now;
     const dist = Math.sqrt(distSq);
-    const aggroRadius = def.aggroRadius ?? (def.worldSize ?? 6) * 5;
+    const aggroRadius = def.aggroRadius ?? (def.worldSize ?? 6) * 2.5;
     const aggroLossRadius = aggroRadius * AGGRO_LOSS_FACTOR;
     let becameAggro = false;
     let lostAggro = false;
@@ -2395,102 +2495,6 @@
   }
   function shouldAggro2(def) {
     return def.behavior === "aggressive" || def.behavior === "territorial";
-  }
-
-  // dist/js/systems/SkillEffects.js
-  function calcChitinDr(level) {
-    return Math.min(0.1 + (level - 1) * 0.05, 0.7);
-  }
-  function calcVenomChance(level) {
-    return 0.3 + (level - 1) * 0.05;
-  }
-  function calcVenomDmgPerTick(level) {
-    return 2 + Math.floor((level - 1) * 0.5);
-  }
-  function calcBiteDamage(level) {
-    const baseDamage = ALL_SKILLS.get("bite")?.baseDamage ?? 7;
-    return Math.max(1, Math.round(baseDamage * getSkillEffectiveness(level)));
-  }
-  var JUMP_BASE_PX = 160;
-  var JUMP_BONUS_PER_LEVEL = 20;
-  function calcJumpDistance(level) {
-    return JUMP_BASE_PX + (level - 1) * JUMP_BONUS_PER_LEVEL;
-  }
-  function calcHemolymphReflect(level) {
-    return 2 * level;
-  }
-  function calcSuperstrengthMult(level) {
-    return 1 + 0.3 * getSkillEffectiveness(level);
-  }
-  function calcPhotosynthesisHeal(level) {
-    return 0.5 * level;
-  }
-
-  // dist/js/systems/EntityLevelingSystem.js
-  var MAX_BONUS_LEVEL = 3;
-  var SKILL_WINS_PER_LVL = 3;
-  var HUNT_RADIUS_PX = 300;
-  var STAT_SCALE = 1.25;
-  function getEffectiveLevel(def, instance) {
-    return def.level + (instance.bonusLevel ?? 0);
-  }
-  function getScaledMaxHp(def, bonusLevel) {
-    return Math.round((def.hp ?? 1) * Math.pow(STAT_SCALE, bonusLevel));
-  }
-  function getEntityBaseDamage(def) {
-    const biteLevel = def.skillLevels?.["bite"];
-    if (biteLevel !== void 0) {
-      return calcBiteDamage(biteLevel);
-    }
-    return def.damage ?? 1;
-  }
-  function getScaledDamage(def, bonusLevel) {
-    return Math.max(1, Math.round(getEntityBaseDamage(def) * Math.pow(STAT_SCALE, bonusLevel)));
-  }
-  function getScaledSpeed(def, bonusLevel) {
-    return Math.round((def.speed ?? 60) * Math.pow(STAT_SCALE, bonusLevel));
-  }
-  function findLevelingPrey(hunter, hunterDef, allEntities, entityMap) {
-    const hunterLevel = getEffectiveLevel(hunterDef, hunter);
-    const huntRadiusSq = HUNT_RADIUS_PX * HUNT_RADIUS_PX;
-    let best = null;
-    let bestDistSq = Infinity;
-    for (const candidate of allEntities.values()) {
-      if (candidate.instanceId === hunter.instanceId)
-        continue;
-      if (!candidate.isAlive)
-        continue;
-      const candidateDef = entityMap.get(candidate.definitionId);
-      if (!candidateDef || candidateDef.category !== "creature")
-        continue;
-      if (!candidateDef.damage)
-        continue;
-      const levelDiff = hunterLevel - getEffectiveLevel(candidateDef, candidate);
-      if (levelDiff < 1 || levelDiff > 3)
-        continue;
-      const dx = candidate.x - hunter.x;
-      const dy = candidate.y - hunter.y;
-      const distSq = dx * dx + dy * dy;
-      if (distSq <= huntRadiusSq && distSq < bestDistSq) {
-        best = candidate;
-        bestDistSq = distSq;
-      }
-    }
-    return best;
-  }
-  function processEntityVictory(winner, winnerDef) {
-    const currentBonus = winner.bonusLevel ?? 0;
-    if (currentBonus >= MAX_BONUS_LEVEL) {
-      return { skillLeveledUp: false, entityLeveledUp: false };
-    }
-    winner.skillWins = (winner.skillWins ?? 0) + 1;
-    if ((winner.skillWins ?? 0) >= SKILL_WINS_PER_LVL) {
-      winner.skillWins = 0;
-      winner.bonusLevel = currentBonus + 1;
-      winner.currentHp = getScaledMaxHp(winnerDef, winner.bonusLevel);
-      return { skillLeveledUp: true, entityLeveledUp: true };
-    }
-    return { skillLeveledUp: true, entityLeveledUp: false };
   }
 
   // dist/js/types/Combat.js
@@ -3992,7 +3996,7 @@
         if (!hunter.isAlive || hunter.isAggro)
           continue;
         const hunterDef = ENTITY_MAP.get(hunter.definitionId);
-        if (!hunterDef || hunterDef.category !== "creature" || !hunterDef.damage)
+        if (!hunterDef || hunterDef.category !== "creature" || !canFight(hunterDef))
           continue;
         if (hunterDef.behavior === "passive")
           continue;
@@ -4186,13 +4190,22 @@
           applyEffect(target, effect);
         }
         this.showDamageNumber(target.x, target.y, result.damageDealt, "#ffffff");
+        const def = ENTITY_MAP.get(target.definitionId);
         if (target.currentHp <= 0) {
           target.isAlive = false;
-          const def = ENTITY_MAP.get(target.definitionId);
           target.respawnAt = Date.now() + (def?.respawnTime ?? 60) * 1e3;
           resetAi(target);
           if (def)
             addLog(`${def.icon} ${def.name} wurde besiegt!`, "system");
+        } else {
+          target.isAggro = true;
+          const hemolymphLv = def?.skillLevels?.["hemolymph"] ?? 0;
+          if (hemolymphLv > 0) {
+            const reflectDmg = calcHemolymphReflect(hemolymphLv);
+            this.gameState.player.hp = Math.max(0, this.gameState.player.hp - reflectDmg);
+            this.showDamageNumber(this.gameState.player.x, this.gameState.player.y, reflectDmg, "#ff8800");
+            addLog(`${def?.icon ?? "\u{1F41E}"} Hemolymph! ${reflectDmg} R\xFCckschlag-Schaden.`, "aggro");
+          }
         }
         addLog(result.message, "absorb");
         this.skillLevelUp(gainSkillXp(this.gameState.player, skillId, result.damageDealt), skillId);
